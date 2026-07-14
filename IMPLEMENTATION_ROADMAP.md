@@ -152,26 +152,107 @@ Convert our roadmap promises into measurable benchmarks:
 
 ---
 
-### 4. Test Data Preparation
+### 4. Content-Type Specific Research
+
+Research the specific token consumption challenges by content type:
+
+**4.1 Images & Signatures**
+- [ ] Analyze token cost by image type:
+  - [ ] Decorative images (logos, watermarks, backgrounds)
+  - [ ] Informational images (charts, diagrams)
+  - [ ] Photo images (screenshots, actual photos)
+  - [ ] Signatures (always irrelevant)
+- [ ] Measure:
+  - [ ] What % of images are actually used by agents?
+  - [ ] Cost comparison: Vision tokens (image) vs text tokens (description)
+  - [ ] Accuracy of image filtering (can we detect signatures reliably?)
+
+**4.2 Tables (The Meta-Level Challenge)**
+
+The real question: **Does this table matter for this query?**
+
+Before extracting ANY table, validate:
+- [ ] **Is this table relevant?** (Read context first, don't extract blindly)
+- [ ] **Can agent understand multi-page tables?** (They struggle with these)
+- [ ] **What's the token cost vs value?**
+
+Three-tier table handling:
+1. **Skip entirely** (irrelevant context)
+   - Table is not related to query
+   - Table is redundant with text
+   - Decision: Don't extract (0 tokens)
+
+2. **Extract summary** (relevant but complex)
+   - Table is relevant
+   - Table is multi-page or complex
+   - Extract: Key metrics + summary (50-100 tokens)
+   - Offer: Full table as optional reference
+
+3. **Extract full** (relevant and simple)
+   - Table is relevant
+   - Table is simple, single-page
+   - Extract: Complete table (200-300 tokens)
+
+Research needed:
+- [ ] How often should we skip tables entirely?
+- [ ] How often should we summarize vs full extract?
+- [ ] Accuracy of relevance detection (can we predict if table is needed?)
+- [ ] Multi-page table comprehension by agents
+  - [ ] Can agents understand tables split across pages?
+  - [ ] Or does context get lost at page breaks?
+  - [ ] Better to provide page-by-page summaries?
+
+Key insight: **The best table extraction is no extraction**
+- If table is irrelevant: Don't extract (save 100% of tokens)
+- If table is complex: Summarize (save 75% of tokens)
+- Only extract full if truly needed
+
+**4.3 Signatures & Watermarks**
+- [ ] Measure prevalence:
+  - [ ] % of PDFs with signatures
+  - [ ] % with logos/watermarks
+  - [ ] Tokens spent on them (waste %)
+- [ ] Validate:
+  - [ ] Can we detect signatures reliably?
+  - [ ] Can we preserve metadata without image?
+
+**4.4 Complex Layouts**
+- [ ] Measure layout confusion:
+  - [ ] Multi-column layouts → Agent confusion
+  - [ ] Preserved whitespace → Extra tokens
+  - [ ] Positioning information → Irrelevant tokens
+- [ ] Validate semantic extraction:
+  - [ ] Extract relationships, not layout
+  - [ ] Result: Clearer context, fewer tokens needed
+
+**Deliverable:** Content-type token analysis + filtering strategy validation
+
+---
+
+### 5. Test Data Preparation
 
 Build benchmark dataset for ongoing validation:
 
-- [ ] Collect 100 diverse PDFs:
-  - [ ] Simple PDFs (1-10 pages, basic layout)
-  - [ ] Medium PDFs (100-300 pages)
+- [ ] Collect 100 diverse PDFs representing real-world distribution:
+  - [ ] Simple PDFs (1-10 pages, basic text)
+  - [ ] Medium PDFs (100-300 pages, mixed content)
   - [ ] Large PDFs (1000+ pages)
-  - [ ] Complex PDFs (nested tables, multi-column)
-  - [ ] Difficult PDFs (scanned, handwritten, mixed)
-  - [ ] Edge cases (huge images, formulas, unusual fonts)
+  - [ ] Complex PDFs (nested tables, multi-column layouts)
+  - [ ] Image-heavy PDFs (financial reports with 20+ images)
+  - [ ] Table-heavy PDFs (including multi-page tables)
+  - [ ] Signature-heavy PDFs (contracts, forms)
+  - [ ] Difficult PDFs (scanned, handwritten, mixed quality)
+  - [ ] Edge cases (huge images, formulas, unusual fonts, watermarks)
 
 - [ ] For each PDF, document:
-  - [ ] Expected table extraction accuracy
-  - [ ] Expected text accuracy
-  - [ ] Known challenges
+  - [ ] Content breakdown (% text, % tables, % images, % signatures)
+  - [ ] Token consumption traditional method
+  - [ ] Token consumption with filtering
   - [ ] LlamaParse performance
   - [ ] Docling performance
+  - [ ] Known extraction challenges
 
-**Deliverable:** Benchmark dataset + metadata
+**Deliverable:** Benchmark dataset + metadata + baseline measurements
 
 ---
 
