@@ -20,9 +20,79 @@
 ### Goal
 Understand exactly what we're competing against and validate that StreamPDF can beat the best (LlamaParse, Docling, Marker) on speed, cost, and quality.
 
-### 1. Competitor Research & Benchmarking
+### 1. Competitor Website & Documentation Analysis
 
-**1.1 LlamaParse (The Cloud Benchmark)**
+**Critical First Step:** Visit competitor websites, read docs, understand what THEY say are the hard problems.
+
+**1.0 LlamaParse Documentation Study**
+- [ ] Visit: https://llamaparse.ai/ and docs
+- [ ] Read and document:
+  - [ ] What challenges do they claim to solve?
+  - [ ] What limitations do they acknowledge?
+  - [ ] What do they claim they DON'T handle well?
+  - [ ] What features are in roadmap?
+  - [ ] What are users complaining about in docs?
+  - [ ] Pricing and cost model details
+- [ ] Look for gaps:
+  - [ ] What problems do they NOT mention?
+  - [ ] What do they avoid discussing?
+  - [ ] What would they struggle with?
+
+**1.1 Docling Documentation Study**
+- [ ] Visit GitHub: https://github.com/DS4SD/docling
+- [ ] Read documentation carefully:
+  - [ ] What are their design goals?
+  - [ ] What challenges do they claim to solve?
+  - [ ] What do they say are limitations?
+  - [ ] Performance claims and benchmarks
+  - [ ] Known issues (GitHub issues, discussions)
+- [ ] Understand architecture:
+  - [ ] Why do they choose heavy pipeline?
+  - [ ] What's the value they're optimizing for?
+  - [ ] Where do they NOT optimize?
+
+**1.2 Marker Documentation Study**
+- [ ] Visit: https://github.com/VikParuchuri/marker
+- [ ] Read documentation:
+  - [ ] What's their design philosophy?
+  - [ ] Supported/unsupported content types
+  - [ ] Known limitations and edge cases
+  - [ ] Performance targets
+
+**1.3 PyMuPDF4LLM Documentation Study**
+- [ ] Visit: https://github.com/pymupdf/pymupdf4llm
+- [ ] Understand:
+  - [ ] Speed claims and benchmarks
+  - [ ] What quality do they prioritize?
+  - [ ] What do they NOT handle well?
+
+**1.4 Unstructured.io Documentation Study**
+- [ ] Visit: https://unstructured.io/
+- [ ] Research:
+  - [ ] Multi-format capabilities (breadth vs depth)
+  - [ ] Quality consistency claims
+  - [ ] Known issues with specific formats
+
+**1.5 User Feedback Analysis**
+- [ ] GitHub Issues & Discussions:
+  - [ ] LlamaParse: What are users asking for?
+  - [ ] Docling: What breaks?
+  - [ ] Marker: What's missing?
+- [ ] Reddit & Stack Overflow:
+  - [ ] Search: "LlamaParse problems"
+  - [ ] Search: "Docling limitations"
+  - [ ] Search: "PDF parsing RAG challenges"
+- [ ] HackerNews & Product Hunt:
+  - [ ] What do users complain about?
+  - [ ] What do they wish existed?
+
+**Deliverable:** Competitive intelligence document (What they say are the problems, what they DON'T mention)
+
+---
+
+### 2. Competitor Benchmarking & Performance Analysis
+
+**2.1 LlamaParse (The Cloud Benchmark)**
 - [ ] Collect actual pricing (all costs: per-page, API, etc.)
 - [ ] Benchmark parsing speed:
   - [ ] Simple PDFs (1-10 pages)
@@ -43,7 +113,7 @@ Understand exactly what we're competing against and validate that StreamPDF can 
 
 ---
 
-**1.2 Docling (The Open-Source Challenger)**
+**2.2 Docling (The Open-Source Challenger)**
 - [ ] Collect performance metrics:
   - [ ] Parsing speed (various PDF sizes)
   - [ ] Memory usage (peak and sustained)
@@ -63,7 +133,7 @@ Understand exactly what we're competing against and validate that StreamPDF can 
 
 ---
 
-**1.3 PyMuPDF4LLM (The Recent Entry)**
+**2.3 PyMuPDF4LLM (The Recent Entry)**
 - [ ] Verify speed claims (benchmark ourselves)
 - [ ] Quality assessment (simple PDFs vs complex)
 - [ ] Community adoption tracking
@@ -73,7 +143,7 @@ Understand exactly what we're competing against and validate that StreamPDF can 
 
 ---
 
-**1.4 Other Competitors (Azure, AWS, Marker, Unstructured)**
+**2.4 Other Competitors (Azure, AWS, Marker, Unstructured)**
 - [ ] Quick assessment (1-2 pages each)
 - [ ] Pricing comparison
 - [ ] Identify strengths/weaknesses
