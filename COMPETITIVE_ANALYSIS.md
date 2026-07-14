@@ -164,7 +164,83 @@ The PDF processing market is fragmented across four categories:
 
 ---
 
-### 5. Cloud Document Intelligence Platforms
+### 5. PyMuPDF4LLM (by PyMuPDF Team)
+
+**What They Do Well:**
+- ✅ Purpose-built for LLM consumption
+- ✅ Clean markdown output
+- ✅ Fast (local processing)
+- ✅ Free and open source
+- ✅ Simple API
+- ✅ Growing LLM community adoption
+
+**How They Charge:**
+- Open source (free)
+
+**Limitations:**
+- ❌ Early stage (just launched 2024-2025)
+- ❌ Still processes full documents (no selective conversion)
+- ❌ Limited enterprise features
+- ❌ No query/search capability
+- ❌ No caching or optimization
+- ❌ No retrieval intelligence
+
+**Gap StreamPDF Fills:**
+- **Retrieval-first** — Find pages before converting
+- **Query capability** — Search PDFs, don't convert everything
+- **Selective conversion** — Only relevant pages
+- **Optimization** — Token efficiency built in
+- **Scale** — Handle 1000+ page documents efficiently
+
+**Market Position:**
+- PyMuPDF4LLM owns "simple local markdown generation"
+- StreamPDF owns "efficient PDF retrieval for agents"
+- Different use cases: PyMuPDF for small docs, StreamPDF for large
+
+---
+
+### 6. Reducto
+
+**What They Do Well:**
+- ✅ Focus on semantic preservation (not losing meaning)
+- ✅ Reduces document complexity while maintaining quality
+- ✅ Modern approach to document compression
+- ✅ Claims high accuracy on complex layouts
+
+**Limitations:**
+- ❌ Still requires full document processing
+- ❌ No retrieval optimization
+- ❌ No query planning
+- ❌ No cost awareness
+- ❌ Positioning unclear in crowded market
+
+**Gap StreamPDF Fills:**
+- **Retrieval-first** — Don't process everything first
+- **Query planning** — Understand what's needed
+- **Token optimization** — Integrated approach, not just compression
+
+---
+
+### 7. PDFMux
+
+**What They Do Well:**
+- ✅ Document multiplexing (handling multiple PDFs)
+- ✅ Lightweight processing
+- ✅ Possible focus on batching
+
+**Limitations:**
+- ❌ Market position unclear
+- ❌ Limited information publicly available
+- ❌ Appears to be early stage
+
+**Gap StreamPDF Fills:**
+- **Clear market positioning** — "Intelligence engine for PDFs"
+- **Retrieval optimization** — Not just multiplexing
+- **Community** — Strong documentation and roadmap
+
+---
+
+### 8. Cloud Document Intelligence Platforms
 
 **Examples:** Microsoft Azure Document Intelligence, Google Document AI, AWS Textract
 
@@ -202,6 +278,92 @@ The PDF processing market is fragmented across four categories:
 **Market Position:**
 - Cloud providers own "highest accuracy + enterprise features"
 - StreamPDF owns "cheapest, fastest, most efficient for RAG"
+
+---
+
+## Comprehensive Competitive Position Map
+
+### Feature Comparison Matrix
+
+| Feature | LlamaParse | Docling | Marker | PyMuPDF4LLM | Unstructured | Reducto | Textract/Azure | **StreamPDF** |
+|---------|-----------|---------|--------|-------------|--------------|---------|----------------|---------------|
+| Full document conversion | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Selective retrieval | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Page-level intelligence | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Query/search capability | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Token efficiency focus | ❌ | ❌ | ❌ | Partial | ❌ | Partial | ❌ | ✅ |
+| Large doc optimization | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Limited | ✅ |
+| Open source | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Local-first | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| No per-page billing | ❌ | ❌ | ✅ | ✅ | Partial | ❌ | ❌ | ✅ |
+| Parsing quality | ✅✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅✅ | ✅ |
+
+### Market Segmentation (2026)
+
+**Tier 1: High Accuracy, Cloud, Per-Page Billing**
+- Players: LlamaParse, Azure Document Intelligence, AWS Textract, Google Document AI
+- Compete on: Accuracy, SLAs, enterprise features
+- Pricing: $1,500-10,000+/month at scale
+- Market Size: ~$200-300M
+- **Limitation:** Vendor lock-in + not optimized for token efficiency
+
+**Tier 2: Quality Markdown, Local, Free**
+- Players: Docling, Marker, PyMuPDF4LLM, Unstructured
+- Compete on: Speed, output quality, ease of use
+- Pricing: Free (open source)
+- Market Size: ~$100-200M
+- **Limitation:** No retrieval optimization, convert everything
+
+**Tier 3: Emerging/Positioning Unclear**
+- Players: Reducto, PDFMux
+- Market Size: <$50M
+- **Issue:** No clear differentiation yet
+
+**Tier 4: Token Efficiency (NEW CATEGORY)**
+- Players: **StreamPDF (only player)**
+- Market Size: **$0-50M opportunity** (unclaimed)
+- **Opportunity:** No one has optimized for AI agent efficiency
+
+### Why The Market Remains Fragmented
+
+1. **Different optimization targets** — Quality vs speed vs cost vs ease-of-use
+2. **No clear winner** — Each tool solves one problem well, none solve the entire workflow
+3. **Token efficiency gap** — **No one focused on token efficiency for AI agents until StreamPDF**
+4. **RAG market still immature** — Only 18-24 months old; winners not yet determined
+
+### The Real Market Opportunity
+
+**The Problem Everyone Missed:**
+- In 2026, AI agents' biggest cost driver is **inefficient document processing**
+- Everyone optimized for **parsing quality** (solved problem)
+- Nobody optimized for **token efficiency** (actual blocker)
+
+**The Data:**
+- Agents waste 60-89% of tokens on PDFs
+- Traditional RAG processes 100%, uses 1%
+- Token costs are now constraint, not parsing quality
+
+**Why StreamPDF Wins:**
+- LlamaParse has best quality, but charges per page → Limits adoption
+- Docling has clean output, but processes everything → Wastes tokens
+- Azure/AWS have accuracy, but vendor lock-in → Enterprise friction
+- PyMuPDF4LLM is easy, but not optimized → Still wastes tokens
+
+**StreamPDF:** "You don't need to process most of it" = 10x better solution
+
+### Competitive Positioning Summary
+
+| Dimension | Winner | StreamPDF Position |
+|-----------|--------|-------------------|
+| Parsing quality | LlamaParse, Azure | ✅ Good enough (not differentiator) |
+| Speed | PyMuPDF4LLM, Marker | ✅ Sub-100ms queries (retrieval-first) |
+| Cost | Marker, Docling | ✅ Free + 10-50x token reduction |
+| Token efficiency | **StreamPDF** | ✅✅ UNIQUE |
+| Local-first | Marker, Docling | ✅ No cloud, no compliance issues |
+| Large documents | **StreamPDF** | ✅✅ UNIQUE (1000+ pages) |
+| Enterprise ready | Azure, AWS | ✅ Roadmap for v1.5 |
+
+**Conclusion:** StreamPDF owns the **only market position that matters for AI agents in 2026: token efficiency through retrieval optimization.**
 
 ---
 
