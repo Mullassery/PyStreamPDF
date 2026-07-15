@@ -16,6 +16,12 @@ pub enum Error {
 
     #[error("Database error: {0}")]
     DatabaseError(String),
+
+    #[error("PDF is encrypted: {0}")]
+    EncryptedPdf(String),
+
+    #[error("Permission denied: {0}")]
+    PermissionDenied(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

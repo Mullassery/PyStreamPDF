@@ -4,7 +4,15 @@ use streampdf_core::{
     page::{BoundingBox, ContentRegion, PageMetadata},
     structure::{DocumentStructure, HeadingNode, TocEntry},
     index::{PdfIndex, PageResult},
+    navigator::PdfNavigator,
+    heading_extractor::HeadingSection,
+    markdown::MarkdownOutput,
+    context::{AgentContext, ContextSection},
+    security::PdfPermissions,
+    audit::{AuditLog, AuditEvent, AuditEventKind},
+    forms::PdfFormField,
 };
+use std::sync::{Arc, Mutex};
 
 #[pyclass]
 struct PyPdfDocument {
@@ -79,6 +87,59 @@ impl PyPdfDocument {
             inner: std::sync::Arc::new(std::sync::Mutex::new(index)),
         })
     }
+
+    fn navigator(&self) -> PyResult<PyPdfNavigator> {
+        let nav = PdfNavigator::new(&self.inner)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfNavigator {
+            inner: Arc::new(Mutex::new(nav)),
+        })
+    }
+
+    fn navigator_with_index(&self, index: &PyPdfIndex) -> PyResult<PyPdfNavigator> {
+        let shared = Arc::clone(&index.inner);
+        let nav = PdfNavigator::with_shared_index(&self.inner, shared)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfNavigator {
+            inner: Arc::new(Mutex::new(nav)),
+        })
+    }
+
+    #[staticmethod]
+    fn open_with_password(path: String, password: String) -> PyResult<Self> {
+        let doc = PdfDocument::open_with_password(&path, &password)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfDocument { inner: doc })
+    }
+
+    #[staticmethod]
+    fn is_encrypted(path: String) -> PyResult<bool> {
+        PdfDocument::is_encrypted(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
+    }
+
+    #[staticmethod]
+    fn permissions(path: String) -> PyResult<PyPdfPermissions> {
+        let perms = PdfDocument::permissions(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfPermissions { inner: perms })
+    }
+
+    fn fingerprint(&self) -> String {
+        self.inner.fingerprint()
+    }
+
+    fn form_fields(&self) -> Vec<PyPdfFormField> {
+        self.inner
+            .form_fields()
+            .iter()
+            .map(|f| PyPdfFormField { inner: f.clone() })
+            .collect()
+    }
+
+    fn has_forms(&self) -> bool {
+        self.inner.has_forms()
+    }
 }
 
 #[pyclass]
@@ -124,6 +185,11 @@ impl PyPageMetadata {
     }
 
     #[getter]
+    fn text(&self) -> String {
+        self.inner.text.clone()
+    }
+
+    #[getter]
     fn regions(&self) -> Vec<PyContentRegion> {
         self.inner
             .regions
@@ -132,6 +198,11 @@ impl PyPageMetadata {
                 inner: r.clone(),
             })
             .collect()
+    }
+
+    #[getter]
+    fn is_likely_scanned(&self) -> bool {
+        self.inner.is_likely_scanned
     }
 
     fn __repr__(&self) -> String {
@@ -366,6 +437,306 @@ impl PyPdfIndex {
     }
 }
 
+#[pyclass]
+struct PyMarkdownOutput {
+    inner: MarkdownOutput,
+}
+
+#[pymethods]
+impl PyMarkdownOutput {
+    #[getter]
+    fn markdown(&self) -> String {
+        self.inner.markdown.clone()
+    }
+
+    #[getter]
+    fn estimated_tokens(&self) -> u32 {
+        self.inner.estimated_tokens
+    }
+
+    #[getter]
+    fn pages_included(&self) -> Vec<u32> {
+        self.inner.pages_included.clone()
+    }
+}
+
+#[pyclass]
+struct PyContextSection {
+    inner: ContextSection,
+}
+
+#[pymethods]
+impl PyContextSection {
+    #[getter]
+    fn heading_path(&self) -> String {
+        self.inner.heading_path.clone()
+    }
+
+    #[getter]
+    fn page_numbers(&self) -> Vec<u32> {
+        self.inner.page_numbers.clone()
+    }
+
+    #[getter]
+    fn content(&self) -> String {
+        self.inner.content.clone()
+    }
+
+    #[getter]
+    fn relevance_score(&self) -> f32 {
+        self.inner.relevance_score
+    }
+}
+
+#[pyclass]
+struct PyAgentContext {
+    inner: AgentContext,
+}
+
+#[pymethods]
+impl PyAgentContext {
+    #[getter]
+    fn query(&self) -> String {
+        self.inner.query.clone()
+    }
+
+    #[getter]
+    fn total_tokens(&self) -> u32 {
+        self.inner.total_tokens
+    }
+
+    #[getter]
+    fn sections(&self) -> Vec<PyContextSection> {
+        self.inner
+            .sections
+            .iter()
+            .map(|s| PyContextSection {
+                inner: s.clone(),
+            })
+            .collect()
+    }
+}
+
+#[pyclass]
+struct PyHeadingSection {
+    inner: HeadingSection,
+}
+
+#[pymethods]
+impl PyHeadingSection {
+    #[getter]
+    fn heading(&self) -> PyHeadingNode {
+        PyHeadingNode {
+            inner: self.inner.heading.clone(),
+        }
+    }
+
+    #[getter]
+    fn start_page(&self) -> u32 {
+        self.inner.start_page
+    }
+
+    #[getter]
+    fn end_page(&self) -> u32 {
+        self.inner.end_page
+    }
+
+    #[getter]
+    fn total_words(&self) -> u32 {
+        self.inner.total_words
+    }
+}
+
+#[pyclass]
+struct PyPdfNavigator {
+    inner: Arc<Mutex<PdfNavigator>>,
+}
+
+#[pymethods]
+impl PyPdfNavigator {
+    fn chapters(&self) -> PyResult<Vec<PyHeadingSection>> {
+        let nav = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        Ok(nav
+            .chapters()
+            .iter()
+            .map(|s| PyHeadingSection {
+                inner: s.clone(),
+            })
+            .collect())
+    }
+
+    fn retrieve(&self, query: String, max_tokens: u32) -> PyResult<PyAgentContext> {
+        let nav = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let ctx = nav
+            .retrieve(&query, max_tokens)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyAgentContext { inner: ctx })
+    }
+
+    fn section_to_markdown(&self, section: &PyHeadingSection, max_tokens: u32) -> PyResult<PyMarkdownOutput> {
+        let nav = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let md = nav
+            .section_to_markdown(&section.inner, max_tokens)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyMarkdownOutput { inner: md })
+    }
+
+    fn page_to_markdown(&self, page_num: u32) -> PyResult<PyMarkdownOutput> {
+        let nav = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let md = nav
+            .page_to_markdown(page_num)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyMarkdownOutput { inner: md })
+    }
+}
+
+#[pyclass]
+struct PyPdfPermissions {
+    inner: PdfPermissions,
+}
+
+#[pymethods]
+impl PyPdfPermissions {
+    #[getter]
+    fn can_copy(&self) -> bool {
+        self.inner.can_copy
+    }
+
+    #[getter]
+    fn can_print(&self) -> bool {
+        self.inner.can_print
+    }
+
+    #[getter]
+    fn can_modify(&self) -> bool {
+        self.inner.can_modify
+    }
+
+    #[getter]
+    fn can_annotate(&self) -> bool {
+        self.inner.can_annotate
+    }
+}
+
+#[pyclass]
+struct PyAuditLog {
+    inner: AuditLog,
+}
+
+#[pymethods]
+impl PyAuditLog {
+    #[staticmethod]
+    fn new(path: String) -> Self {
+        PyAuditLog {
+            inner: AuditLog::new(&path),
+        }
+    }
+
+    fn record_open(&self, doc_path: String) -> PyResult<()> {
+        let event = AuditEvent {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            doc_path,
+            kind: AuditEventKind::DocumentOpened,
+        };
+        self.inner
+            .record(event)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
+    }
+
+    fn record_search(&self, doc_path: String, query: String, results_count: usize) -> PyResult<()> {
+        let event = AuditEvent {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            doc_path,
+            kind: AuditEventKind::SearchPerformed {
+                query,
+                results_count,
+            },
+        };
+        self.inner
+            .record(event)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
+    }
+
+    fn events(&self) -> PyResult<Vec<PyObject>> {
+        let events = self
+            .inner
+            .events()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+
+        Python::with_gil(|py| {
+            let mut result = Vec::new();
+            for event in events {
+                let dict = pyo3::types::PyDict::new(py);
+                dict.set_item("timestamp", &event.timestamp)?;
+                dict.set_item("doc_path", &event.doc_path)?;
+                match &event.kind {
+                    AuditEventKind::DocumentOpened => {
+                        dict.set_item("kind", "DocumentOpened")?;
+                    }
+                    AuditEventKind::DocumentIndexed => {
+                        dict.set_item("kind", "DocumentIndexed")?;
+                    }
+                    AuditEventKind::SearchPerformed {
+                        query,
+                        results_count,
+                    } => {
+                        dict.set_item("kind", "SearchPerformed")?;
+                        dict.set_item("query", query)?;
+                        dict.set_item("results_count", results_count)?;
+                    }
+                    AuditEventKind::ContextRetrieved { query, tokens } => {
+                        dict.set_item("kind", "ContextRetrieved")?;
+                        dict.set_item("query", query)?;
+                        dict.set_item("tokens", tokens)?;
+                    }
+                }
+                result.push(dict.into());
+            }
+            Ok(result)
+        })
+    }
+}
+
+#[pyclass]
+struct PyPdfFormField {
+    inner: PdfFormField,
+}
+
+#[pymethods]
+impl PyPdfFormField {
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name.clone()
+    }
+
+    #[getter]
+    fn field_type(&self) -> String {
+        format!("{:?}", self.inner.field_type).to_lowercase()
+    }
+
+    #[getter]
+    fn value(&self) -> Option<String> {
+        self.inner.value.clone()
+    }
+
+    #[getter]
+    fn page_number(&self) -> u32 {
+        self.inner.page_number
+    }
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPdfDocument>()?;
@@ -377,6 +748,14 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyHeadingNode>()?;
     m.add_class::<PyPageResult>()?;
     m.add_class::<PyPdfIndex>()?;
+    m.add_class::<PyMarkdownOutput>()?;
+    m.add_class::<PyContextSection>()?;
+    m.add_class::<PyAgentContext>()?;
+    m.add_class::<PyHeadingSection>()?;
+    m.add_class::<PyPdfNavigator>()?;
+    m.add_class::<PyPdfPermissions>()?;
+    m.add_class::<PyAuditLog>()?;
+    m.add_class::<PyPdfFormField>()?;
 
     m.add_function(wrap_pyfunction!(open, m)?)?;
     m.add_function(wrap_pyfunction!(load_index, m)?)?;

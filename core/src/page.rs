@@ -36,5 +36,7 @@ pub struct PageMetadata {
     pub label: Option<String>,
     pub word_count: u32,
     pub text_preview: String,
+    pub text: String,
     pub regions: Vec<ContentRegion>,
+    pub is_likely_scanned: bool,
 }

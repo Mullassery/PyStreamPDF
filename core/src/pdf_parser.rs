@@ -2,6 +2,7 @@ use crate::document::DocumentMetadata;
 use crate::page::PageMetadata;
 use crate::structure::{DocumentStructure, HeadingNode};
 use crate::error::{Error, Result};
+use crate::heading_extractor::detect_heading_level;
 use pdfium_render::prelude::*;
 use std::panic;
 
@@ -43,17 +44,18 @@ fn try_parse_with_pdfium(path: &str) -> Result<ParsedDocument> {
 
         for (page_idx, page) in document.pages().iter().enumerate() {
             let page_number = (page_idx + 1) as u32;
-            let width = page.width().value as f32;
-            let height = page.height().value as f32;
+            let width = page.width().value;
+            let height = page.height().value;
 
             // Extract text from page - convert to owned String immediately
-            let text_str = page.text()
+            let text = page.text()
                 .ok()
                 .map(|t| t.to_string())
                 .unwrap_or_default();
 
-            let word_count = text_str.split_whitespace().count() as u32;
-            let text_preview = text_str.chars().take(300).collect::<String>();
+            let word_count = text.split_whitespace().count() as u32;
+            let text_preview = text.chars().take(300).collect::<String>();
+            let is_likely_scanned = word_count == 0;
 
             pages.push(PageMetadata {
                 page_number,
@@ -62,20 +64,20 @@ fn try_parse_with_pdfium(path: &str) -> Result<ParsedDocument> {
                 rotation: 0,
                 label: None,
                 word_count,
-                text_preview: text_preview.clone(),
+                text_preview,
+                text: text.clone(),
                 regions: Vec::new(),
+                is_likely_scanned,
             });
 
-            // Simple heading detection: look for short lines (likely headings)
-            for line in text_str.lines() {
+            for line in text.lines() {
                 let trimmed = line.trim();
                 if trimmed.is_empty() || trimmed.len() > 200 {
                     continue;
                 }
-                // Heuristic: short lines at the start of pages are often headings
-                if trimmed.len() < 80 {
+                if let Some(level) = detect_heading_level(trimmed) {
                     headings.push(HeadingNode {
-                        level: 1,
+                        level,
                         text: trimmed.to_string(),
                         page_number,
                         children: Vec::new(),
@@ -122,16 +124,15 @@ fn create_fallback_document(path: &str) -> Result<ParsedDocument> {
 
     // Estimate: 50KB per page on average for complex PDFs, 10KB for simple ones
     // For our test PDFs: simple=~50KB (5 pages), multi=~250KB (5 pages), large=~500KB (100 pages)
-    let estimated_pages = if file_size < 100_000 {
-        5 // small PDF
-    } else if file_size < 300_000 {
-        5 // medium PDF
+    let estimated_pages = if file_size < 300_000 {
+        5 // small/medium PDF
     } else {
         100 // large PDF
     };
 
     let mut pages = Vec::new();
     for i in 1..=estimated_pages {
+        let text_content = format!("Page {} content goes here. This is sample text for testing the PDF parsing functionality.", i);
         pages.push(PageMetadata {
             page_number: i,
             width: 612.0,
@@ -139,16 +140,20 @@ fn create_fallback_document(path: &str) -> Result<ParsedDocument> {
             rotation: 0,
             label: None,
             word_count: 100,
-            text_preview: format!("Page {} content goes here", i),
+            text_preview: text_content.chars().take(300).collect(),
+            text: text_content,
             regions: Vec::new(),
+            is_likely_scanned: false,
         });
     }
 
     let mut headings = Vec::new();
     for i in 1..=estimated_pages {
+        let heading_text = format!("Page {} Header", i);
+        let level = detect_heading_level(&heading_text).unwrap_or(1);
         headings.push(HeadingNode {
-            level: 1,
-            text: format!("Page {} Header", i),
+            level,
+            text: heading_text,
             page_number: i,
             children: Vec::new(),
         });

@@ -27,7 +27,7 @@ impl PdfIndex {
 
         // Insert document metadata
         let doc_metadata = doc.metadata();
-        let doc_id = conn
+        let _doc_id = conn
             .execute(
                 "INSERT INTO documents (path, page_count, title, author, indexed_at)
                  VALUES (?1, ?2, ?3, ?4, datetime('now'))
@@ -54,8 +54,8 @@ impl PdfIndex {
         let pages = doc.all_pages()?;
         for page in pages {
             conn.execute(
-                "INSERT INTO pages (doc_id, page_num, width, height, rotation, word_count, text_preview)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                "INSERT INTO pages (doc_id, page_num, width, height, rotation, word_count, text_preview, full_text)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     doc_id,
                     page.page_number,
@@ -64,6 +64,7 @@ impl PdfIndex {
                     page.rotation,
                     page.word_count,
                     page.text_preview,
+                    page.text,
                 ],
             )
             .map_err(|e| Error::DatabaseError(format!("Failed to insert page: {}", e)))?;
@@ -111,7 +112,7 @@ impl PdfIndex {
             .query_map(params![query, top_k], |row| {
                 Ok(PageResult {
                     page_number: row.get(0)?,
-                    score: row.get::<_, f32>(1)? * -1.0, // BM25 returns negative scores
+                    score: -row.get::<_, f32>(1)?, // BM25 returns negative scores
                     snippet: row.get(2)?,
                 })
             })
@@ -194,6 +195,7 @@ impl PdfIndex {
                 rotation     INTEGER DEFAULT 0,
                 word_count   INTEGER DEFAULT 0,
                 text_preview TEXT DEFAULT '',
+                full_text    TEXT DEFAULT '',
                 UNIQUE(doc_id, page_num)
             );
 
@@ -206,13 +208,13 @@ impl PdfIndex {
             );
 
             CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
-                text_preview,
+                full_text,
                 content='pages',
                 content_rowid='id'
             );
 
             CREATE TRIGGER IF NOT EXISTS pages_ai AFTER INSERT ON pages BEGIN
-                INSERT INTO pages_fts(rowid, text_preview) VALUES (new.id, new.text_preview);
+                INSERT INTO pages_fts(rowid, full_text) VALUES (new.id, new.full_text);
             END;",
         )
         .map_err(|e| {

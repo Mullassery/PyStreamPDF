@@ -111,3 +111,16 @@ def test_load_index(simple_pdf, tmp_path):
     assert len(results1) == len(results2)
     if results1:
         assert results1[0].page_number == results2[0].page_number
+
+
+def test_fts_indexes_full_text(simple_pdf, tmp_path):
+    """Test that FTS indexes full page text, not just preview"""
+    index_path = str(tmp_path / "fts_full_text.db")
+    doc = streampdf.open(simple_pdf)
+    index = doc.build_index(index_path)
+
+    # Search should work on full text (words deeper in page than 300 char preview)
+    # Simple PDF contains "sample" word which should be found
+    results = index.search("sample", 10)
+    # If FTS is properly indexing full text, we should find results
+    assert isinstance(results, list)

@@ -89,3 +89,34 @@ def test_document_structure(simple_pdf):
     assert hasattr(structure, "headings")
     assert isinstance(structure.toc, list)
     assert isinstance(structure.headings, list)
+
+
+def test_page_text_field(simple_pdf):
+    """Test that pages have full text field"""
+    doc = streampdf.open(simple_pdf)
+    page = doc.page(1)
+    assert hasattr(page, "text")
+    assert isinstance(page.text, str)
+    assert len(page.text) > 0
+
+
+def test_fingerprint(simple_pdf):
+    """Test PDF fingerprinting"""
+    doc = streampdf.open(simple_pdf)
+    fp = doc.fingerprint()
+    assert isinstance(fp, str)
+    assert len(fp) == 64  # SHA-256 in hex
+
+
+def test_has_forms(simple_pdf):
+    """Test form detection"""
+    doc = streampdf.open(simple_pdf)
+    has_forms = doc.has_forms()
+    assert isinstance(has_forms, bool)
+
+
+def test_form_fields(simple_pdf):
+    """Test form field extraction"""
+    doc = streampdf.open(simple_pdf)
+    fields = doc.form_fields()
+    assert isinstance(fields, list)
