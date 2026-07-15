@@ -1,67 +1,136 @@
-use crate::error::Result;
 use serde::{Deserialize, Serialize};
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::path::Path;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Type of audit event
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum AuditEventKind {
+    /// PDF document opened
     DocumentOpened,
+    /// PDF index built
     DocumentIndexed,
+    /// Search performed on document
     SearchPerformed { query: String, results_count: usize },
+    /// Context retrieved from document
     ContextRetrieved { query: String, tokens: u32 },
 }
 
+/// Single audit event for governance tracking
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEvent {
+    /// When event occurred (ISO 8601 string)
     pub timestamp: String,
+    /// Document path or identifier
     pub doc_path: String,
+    /// Event type and details
     pub kind: AuditEventKind,
 }
 
-/// Audit log that appends events as JSON lines.
-pub struct AuditLog {
-    path: String,
+impl AuditEvent {
+    /// Create a new audit event with current timestamp
+    pub fn new(doc_path: String, kind: AuditEventKind) -> Self {
+        Self {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            doc_path,
+            kind,
+        }
+    }
+
+    /// Create a document opened event
+    pub fn document_opened(doc_path: String) -> Self {
+        Self::new(doc_path, AuditEventKind::DocumentOpened)
+    }
+
+    /// Create a document indexed event
+    pub fn document_indexed(doc_path: String) -> Self {
+        Self::new(doc_path, AuditEventKind::DocumentIndexed)
+    }
+
+    /// Create a search performed event
+    pub fn search_performed(doc_path: String, query: String, results_count: usize) -> Self {
+        Self::new(
+            doc_path,
+            AuditEventKind::SearchPerformed { query, results_count },
+        )
+    }
+
+    /// Create a context retrieved event
+    pub fn context_retrieved(doc_path: String, query: String, tokens: u32) -> Self {
+        Self::new(
+            doc_path,
+            AuditEventKind::ContextRetrieved { query, tokens },
+        )
+    }
 }
 
-impl AuditLog {
-    pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        AuditLog {
-            path: path.as_ref().to_string_lossy().to_string(),
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_audit_event_creation() {
+        let event = AuditEvent::new(
+            "document.pdf".to_string(),
+            AuditEventKind::DocumentOpened,
+        );
+        assert_eq!(event.doc_path, "document.pdf");
+        assert_eq!(event.kind, AuditEventKind::DocumentOpened);
+        assert!(!event.timestamp.is_empty());
     }
 
-    /// Record an audit event (append as JSON line).
-    pub fn record(&self, event: AuditEvent) -> Result<()> {
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)
-            .map_err(crate::error::Error::Io)?;
-
-        let json_line = serde_json::to_string(&event)
-            .map_err(|e| crate::error::Error::Pdf(format!("JSON serialization failed: {}", e)))?;
-
-        writeln!(file, "{}", json_line)
-            .map_err(crate::error::Error::Io)?;
-
-        Ok(())
+    #[test]
+    fn test_audit_event_document_opened() {
+        let event = AuditEvent::document_opened("doc.pdf".to_string());
+        assert_eq!(event.kind, AuditEventKind::DocumentOpened);
     }
 
-    /// Read all audit events from the log.
-    pub fn events(&self) -> Result<Vec<AuditEvent>> {
-        let content = std::fs::read_to_string(&self.path)
-            .map_err(crate::error::Error::Io)?;
-
-        let mut events = Vec::new();
-        for line in content.lines() {
-            if !line.trim().is_empty() {
-                let event: AuditEvent = serde_json::from_str(line)
-                    .map_err(|e| crate::error::Error::Pdf(format!("JSON parse failed: {}", e)))?;
-                events.push(event);
+    #[test]
+    fn test_audit_event_search_performed() {
+        let event = AuditEvent::search_performed(
+            "doc.pdf".to_string(),
+            "machine learning".to_string(),
+            42,
+        );
+        match event.kind {
+            AuditEventKind::SearchPerformed { query, results_count } => {
+                assert_eq!(query, "machine learning");
+                assert_eq!(results_count, 42);
             }
+            _ => panic!("Expected SearchPerformed event"),
         }
+    }
 
-        Ok(events)
+    #[test]
+    fn test_audit_event_context_retrieved() {
+        let event = AuditEvent::context_retrieved(
+            "doc.pdf".to_string(),
+            "AI summary".to_string(),
+            1500,
+        );
+        match event.kind {
+            AuditEventKind::ContextRetrieved { query, tokens } => {
+                assert_eq!(query, "AI summary");
+                assert_eq!(tokens, 1500);
+            }
+            _ => panic!("Expected ContextRetrieved event"),
+        }
+    }
+
+    #[test]
+    fn test_audit_event_serialization() {
+        let event = AuditEvent::document_indexed("research.pdf".to_string());
+        let json = serde_json::to_string(&event).unwrap();
+        let deserialized: AuditEvent = serde_json::from_str(&json).unwrap();
+        assert_eq!(event.doc_path, deserialized.doc_path);
+        assert_eq!(event.kind, deserialized.kind);
+    }
+
+    #[test]
+    fn test_audit_log_event() {
+        let event = AuditEvent::search_performed(
+            "search_test.pdf".to_string(),
+            "test query".to_string(),
+            5,
+        );
+        assert_eq!(event.doc_path, "search_test.pdf");
     }
 }

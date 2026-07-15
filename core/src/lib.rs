@@ -22,5 +22,5 @@ pub use markdown::MarkdownOutput;
 pub use context::{AgentContext, ContextSection};
 pub use navigator::PdfNavigator;
 pub use security::{PdfPermissions, EncryptionStatus};
-pub use audit::{AuditLog, AuditEvent, AuditEventKind};
+pub use audit::{AuditEvent, AuditEventKind};
 pub use forms::{PdfFormField, FormFieldType};
