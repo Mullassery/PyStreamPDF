@@ -64,13 +64,13 @@ impl PdfFormField {
 }
 
 /// Extract all form fields from a PDF
-pub fn extract_form_fields(path: &str) -> Result<Vec<PdfFormField>> {
+pub fn extract_form_fields(_path: &str) -> Result<Vec<PdfFormField>> {
     // Stub: will be implemented with pdfium-render
     Ok(Vec::new())
 }
 
 /// Check if a PDF has interactive form elements
-pub fn has_forms(path: &str) -> bool {
+pub fn has_forms(_path: &str) -> bool {
     // Stub: will be implemented with pdfium-render
     false
 }

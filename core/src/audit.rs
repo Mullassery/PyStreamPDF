@@ -1,4 +1,7 @@
 use serde::{Deserialize, Serialize};
+use crate::Result;
+use std::fs::OpenOptions;
+use std::io::{Write, BufRead, BufReader};
 
 /// Type of audit event
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -59,6 +62,63 @@ impl AuditEvent {
             doc_path,
             AuditEventKind::ContextRetrieved { query, tokens },
         )
+    }
+}
+
+/// Audit log for tracking document operations
+pub struct AuditLog {
+    _path: String,
+}
+
+impl AuditLog {
+    /// Create a new audit log at the specified path
+    pub fn new(path: &str) -> Self {
+        Self {
+            _path: path.to_string(),
+        }
+    }
+
+    /// Record an audit event
+    pub fn record(&self, event: AuditEvent) -> Result<()> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self._path)
+            .map_err(crate::Error::Io)?;
+
+        let json = serde_json::to_string(&event)
+            .map_err(|e| crate::Error::Pdf(format!("Failed to serialize event: {}", e)))?;
+
+        writeln!(file, "{}", json)
+            .map_err(crate::Error::Io)?;
+
+        Ok(())
+    }
+
+    /// Retrieve all recorded events
+    pub fn events(&self) -> Result<Vec<AuditEvent>> {
+        if !std::path::Path::new(&self._path).exists() {
+            return Ok(Vec::new());
+        }
+
+        let file = std::fs::File::open(&self._path)
+            .map_err(crate::Error::Io)?;
+
+        let reader = BufReader::new(file);
+        let mut events = Vec::new();
+
+        for line in reader.lines() {
+            let line = line.map_err(crate::Error::Io)?;
+            if line.is_empty() {
+                continue;
+            }
+
+            let event: AuditEvent = serde_json::from_str(&line)
+                .map_err(|e| crate::Error::Pdf(format!("Failed to deserialize event: {}", e)))?;
+            events.push(event);
+        }
+
+        Ok(events)
     }
 }
 

@@ -29,7 +29,7 @@ def test_record_open(simple_pdf):
             assert len(lines) > 0
             event = json.loads(lines[0])
             assert event["doc_path"] == simple_pdf
-            assert event["kind"] == "DocumentOpened"
+            assert event["kind"] == "document_opened"
 
 
 def test_record_search(simple_pdf):
@@ -47,8 +47,8 @@ def test_record_search(simple_pdf):
             assert len(lines) > 0
             event = json.loads(lines[0])
             # Enum is serialized as {variant_name: {...details...}}
-            assert "SearchPerformed" in event["kind"]
-            kind_data = event["kind"]["SearchPerformed"]
+            assert "search_performed" in event["kind"]
+            kind_data = event["kind"]["search_performed"]
             assert kind_data["query"] == "test query"
             assert kind_data["results_count"] == 5
 

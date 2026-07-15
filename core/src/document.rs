@@ -144,8 +144,6 @@ impl PdfDocument {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_pdf_document_creation() {
         assert_eq!(1, 1);

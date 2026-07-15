@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use crate::Error;
 use crate::Result;
 
 /// PDF encryption status indicator
@@ -48,23 +47,24 @@ impl PdfPermissions {
 }
 
 /// Check if a PDF file is encrypted without fully opening it
-pub fn check_encryption(path: &str) -> Result<EncryptionStatus> {
+pub fn check_encryption(_path: &str) -> Result<EncryptionStatus> {
     // Stub: will be implemented with pdfium-render
     // For now, assume unencrypted
     Ok(EncryptionStatus::NotEncrypted)
 }
 
 /// Extract permission flags from a PDF document
-pub fn extract_permissions(path: &str) -> Result<PdfPermissions> {
+pub fn extract_permissions(_path: &str) -> Result<PdfPermissions> {
     // Stub: will be implemented with pdfium-render
     // For now, return default permissions
     Ok(PdfPermissions::default())
 }
 
 /// Try to open an encrypted PDF with a password
-pub fn open_with_password(path: &str, password: &str) -> Result<Vec<u8>> {
-    // Stub: will be implemented with pdfium-render
-    std::fs::read(path).map_err(|e| Error::Io(e))
+pub fn open_with_password(path: &str, _password: &str) -> Result<crate::pdf_parser::ParsedDocument> {
+    // Stub: In production, would decrypt using password
+    // For now, parse as regular PDF
+    crate::pdf_parser::parse_document_open(path)
 }
 
 #[cfg(test)]
