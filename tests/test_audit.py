@@ -10,7 +10,7 @@ def test_audit_log_creation():
     with tempfile.TemporaryDirectory() as tmpdir:
         log_path = os.path.join(tmpdir, "audit_test.jsonl")
 
-        audit = streampdf._core.PyAuditLog.new(log_path)
+        audit = pystreampdf._core.PyAuditLog.new(log_path)
         assert audit is not None
 
 
@@ -19,7 +19,7 @@ def test_record_open(simple_pdf):
     with tempfile.TemporaryDirectory() as tmpdir:
         log_path = os.path.join(tmpdir, "audit_test.jsonl")
 
-        audit = streampdf._core.PyAuditLog.new(log_path)
+        audit = pystreampdf._core.PyAuditLog.new(log_path)
         audit.record_open(simple_pdf)
 
         # Check file exists and has content
@@ -37,7 +37,7 @@ def test_record_search(simple_pdf):
     with tempfile.TemporaryDirectory() as tmpdir:
         log_path = os.path.join(tmpdir, "audit_test.jsonl")
 
-        audit = streampdf._core.PyAuditLog.new(log_path)
+        audit = pystreampdf._core.PyAuditLog.new(log_path)
         audit.record_search(simple_pdf, "test query", 5)
 
         # Check file exists and has content
@@ -58,7 +58,7 @@ def test_events_readable(simple_pdf):
     with tempfile.TemporaryDirectory() as tmpdir:
         log_path = os.path.join(tmpdir, "audit_test.jsonl")
 
-        audit = streampdf._core.PyAuditLog.new(log_path)
+        audit = pystreampdf._core.PyAuditLog.new(log_path)
         audit.record_open(simple_pdf)
         audit.record_search(simple_pdf, "test", 3)
 
@@ -74,7 +74,7 @@ def test_in_memory_audit():
     with tempfile.TemporaryDirectory() as tmpdir:
         log_path = os.path.join(tmpdir, "inmem_audit_test.jsonl")
 
-        audit = streampdf._core.PyAuditLog.new(log_path)
+        audit = pystreampdf._core.PyAuditLog.new(log_path)
         audit.record_open("/path/to/doc.pdf")
 
         events = audit.events()

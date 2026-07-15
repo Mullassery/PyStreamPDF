@@ -4,14 +4,14 @@ import pystreampdf
 
 def test_navigator_creation(simple_pdf):
     """Test creating a navigator from a document"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     assert nav is not None
 
 
 def test_chapters_list(simple_pdf):
     """Test getting chapters from navigator"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     chapters = nav.chapters()
     assert isinstance(chapters, list)
@@ -19,7 +19,7 @@ def test_chapters_list(simple_pdf):
 
 def test_chapter_fields(simple_pdf):
     """Test that chapters have required fields"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     chapters = nav.chapters()
     if chapters:
@@ -32,7 +32,7 @@ def test_chapter_fields(simple_pdf):
 
 def test_page_to_markdown(simple_pdf):
     """Test markdown generation for a single page"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     md_output = nav.page_to_markdown(1)
     assert md_output is not None
@@ -43,7 +43,7 @@ def test_page_to_markdown(simple_pdf):
 
 def test_markdown_output_fields(simple_pdf):
     """Test MarkdownOutput fields"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     md = nav.page_to_markdown(1)
     assert isinstance(md.markdown, str)
@@ -54,7 +54,7 @@ def test_markdown_output_fields(simple_pdf):
 
 def test_retrieve_without_index(simple_pdf):
     """Test that retrieve raises error when no index available"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     nav = doc.navigator()
     with pytest.raises(Exception):
         nav.retrieve("test", 1000)
@@ -62,7 +62,7 @@ def test_retrieve_without_index(simple_pdf):
 
 def test_navigator_with_index_retrieves(simple_pdf):
     """Test that navigator_with_index() allows retrieve()"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     index = doc.build_index(":memory:")
     nav = doc.navigator_with_index(index)
 

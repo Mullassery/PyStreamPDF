@@ -65,19 +65,19 @@ The build artifacts are ready in `target/wheels/`:
 pip install twine
 
 # Upload to PyPI (you'll be prompted for credentials):
-twine upload target/wheels/streampdf-1.5.0*.whl target/wheels/streampdf-1.5.0.tar.gz
+twine upload target/wheels/pystreampdf-1.5.0*.whl target/wheels/pystreampdf-1.5.0.tar.gz
 
 # Or use token-based auth:
 twine upload \
   --username __token__ \
   --password "pypi-AgE..." \
-  target/wheels/streampdf-1.5.0*.whl \
-  target/wheels/streampdf-1.5.0.tar.gz
+  target/wheels/pystreampdf-1.5.0*.whl \
+  target/wheels/pystreampdf-1.5.0.tar.gz
 ```
 
 ### Verify on PyPI
 
-Once uploaded, verify at: https://pypi.org/project/streampdf/
+Once uploaded, verify at: https://pypi.org/project/PyStreamPDF/
 
 ---
 
@@ -129,8 +129,8 @@ https://github.com/Mullassery/StreamPDF
 MIT - See LICENSE file
 EOF
 )" \
-  target/wheels/streampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl \
-  target/wheels/streampdf-1.5.0.tar.gz
+  target/wheels/pystreampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl \
+  target/wheels/pystreampdf-1.5.0.tar.gz
 ```
 
 ### Manual Release (via GitHub Web UI)
@@ -158,17 +158,17 @@ pip install PyStreamPDF
 uv pip install PyStreamPDF
 
 # Verify installation
-python -c "import streampdf; print(f'StreamPDF {streampdf.__version__} installed successfully')"
+python -c "import pystreampdf; print(f'StreamPDF {pystreampdf.__version__} installed successfully')"
 ```
 
 ### Test the Package
 
 ```python
-import streampdf
+import pystreampdf
 
-doc = streampdf.open("example.pdf")
+doc = pystreampdf.open("example.pdf")
 print(f"Pages: {doc.page_count}")
-print(f"Version: {streampdf.__version__}")
+print(f"Version: {pystreampdf.__version__}")
 ```
 
 ---
@@ -177,8 +177,8 @@ print(f"Version: {streampdf.__version__}")
 
 Both artifacts are ready and signed:
 
-- **Wheel**: `target/wheels/streampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl` (1.4 MB)
-- **Source**: `target/wheels/streampdf-1.5.0.tar.gz` (27 KB)
+- **Wheel**: `target/wheels/pystreampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl` (1.4 MB)
+- **Source**: `target/wheels/pystreampdf-1.5.0.tar.gz` (27 KB)
 
 To build for other Python versions on different platforms:
 
@@ -243,7 +243,7 @@ Ensure you have:
 ### Package not found on PyPI
 
 PyPI takes 5-15 minutes to index new packages. Check:
-https://pypi.org/project/streampdf/
+https://pypi.org/project/PyStreamPDF/
 
 ---
 

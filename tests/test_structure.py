@@ -4,7 +4,7 @@ import pystreampdf
 
 def test_structure_toc(simple_pdf):
     """Test that structure includes table of contents"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     structure = doc.structure
 
     assert hasattr(structure, "toc")
@@ -13,7 +13,7 @@ def test_structure_toc(simple_pdf):
 
 def test_structure_headings(simple_pdf):
     """Test that structure includes headings"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     structure = doc.structure
 
     assert hasattr(structure, "headings")
@@ -22,7 +22,7 @@ def test_structure_headings(simple_pdf):
 
 def test_heading_node_fields(simple_pdf):
     """Test that heading nodes have required fields"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     structure = doc.structure
 
     if structure.headings:
@@ -40,7 +40,7 @@ def test_heading_node_fields(simple_pdf):
 
 def test_toc_entry_fields(simple_pdf):
     """Test that TOC entries have required fields"""
-    doc = streampdf.open(simple_pdf)
+    doc = pystreampdf.open(simple_pdf)
     structure = doc.structure
 
     if structure.toc:

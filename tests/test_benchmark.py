@@ -9,7 +9,7 @@ def test_parse_large_pdf_performance(large_pdf):
     Phase 1b success criterion: parse document quickly
     Final goal: parse 1000-page PDF in <500ms
     """
-    doc = streampdf.open(large_pdf)
+    doc = pystreampdf.open(large_pdf)
 
     start = time.time()
     pages = doc.all_pages
@@ -24,7 +24,7 @@ def test_parse_large_pdf_performance(large_pdf):
 
 def test_structure_extraction(large_pdf):
     """Test that structure extraction works"""
-    doc = streampdf.open(large_pdf)
+    doc = pystreampdf.open(large_pdf)
     structure = doc.structure
     assert structure is not None
     # Should have at least parsed something

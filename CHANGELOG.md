@@ -101,8 +101,8 @@ All notable changes to StreamPDF are documented here.
 
 ### Build & Release
 - Version bumped to 1.5.0
-- Wheel built: `streampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl` (1.4 MB)
-- Source distribution: `streampdf-1.5.0.tar.gz` (27 KB)
+- Wheel built: `pystreampdf-1.5.0-cp313-cp313-macosx_11_0_arm64.whl` (1.4 MB)
+- Source distribution: `pystreampdf-1.5.0.tar.gz` (27 KB)
 - Ready for PyPI publication
 
 ---
