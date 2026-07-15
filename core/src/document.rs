@@ -1,10 +1,12 @@
 use crate::error::{Error, Result};
 use crate::page::PageMetadata;
 use crate::structure::DocumentStructure;
+use crate::pdf_parser::{ParsedDocument, parse_document_open};
 use std::path::Path;
 
 pub struct PdfDocument {
     path: String,
+    parsed: ParsedDocument,
 }
 
 #[derive(Debug, Clone)]
@@ -30,49 +32,37 @@ impl PdfDocument {
             return Err(Error::Pdf("File not found".to_string()));
         }
 
-        Ok(PdfDocument { path: path_str })
-    }
+        let parsed = parse_document_open(&path_str)?;
 
-    pub fn page_count(&self) -> u32 {
-        // Placeholder implementation - will be enhanced with actual PDF parsing
-        0
-    }
-
-    pub fn metadata(&self) -> DocumentMetadata {
-        DocumentMetadata {
-            title: None,
-            author: None,
-            creator: None,
-            producer: None,
-            created: None,
-            modified: None,
-            page_count: 0,
-        }
-    }
-
-    pub fn page(&self, page_num: u32) -> Result<PageMetadata> {
-        if page_num == 0 {
-            return Err(Error::InvalidPageNumber(page_num));
-        }
-
-        Ok(PageMetadata {
-            page_number: page_num,
-            width: 612.0,
-            height: 792.0,
-            rotation: 0,
-            label: None,
-            word_count: 0,
-            text_preview: String::new(),
-            regions: Vec::new(),
+        Ok(PdfDocument {
+            path: path_str,
+            parsed,
         })
     }
 
+    pub fn page_count(&self) -> u32 {
+        self.parsed.page_count
+    }
+
+    pub fn metadata(&self) -> DocumentMetadata {
+        self.parsed.metadata.clone()
+    }
+
+    pub fn page(&self, page_num: u32) -> Result<PageMetadata> {
+        if page_num == 0 || page_num > self.parsed.page_count {
+            return Err(Error::InvalidPageNumber(page_num));
+        }
+
+        let idx = (page_num as usize) - 1;
+        Ok(self.parsed.pages[idx].clone())
+    }
+
     pub fn all_pages(&self) -> Result<Vec<PageMetadata>> {
-        Ok(Vec::new())
+        Ok(self.parsed.pages.clone())
     }
 
     pub fn structure(&self) -> Result<DocumentStructure> {
-        Ok(DocumentStructure::new())
+        Ok(self.parsed.structure.clone())
     }
 
     pub fn path(&self) -> &str {

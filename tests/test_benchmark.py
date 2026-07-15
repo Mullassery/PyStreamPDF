@@ -6,8 +6,8 @@ import streampdf
 def test_parse_large_pdf_performance(large_pdf):
     """Test that parsing a large PDF completes in reasonable time
 
-    Phase 1a success criterion: parse 1000-page PDF in <500ms
-    This test will be enabled once PDF parsing is implemented.
+    Phase 1b success criterion: parse document quickly
+    Final goal: parse 1000-page PDF in <500ms
     """
     doc = streampdf.open(large_pdf)
 
@@ -15,10 +15,10 @@ def test_parse_large_pdf_performance(large_pdf):
     pages = doc.all_pages
     elapsed_ms = (time.time() - start) * 1000
 
-    # For now, we just verify the API works and the timing is tracked
-    # Once PDF parsing is implemented, we'll assert len(pages) > 0
     assert isinstance(pages, list)
-    # Final goal is <500ms for 1000 pages
+    # Test fixture generates either 5 or 100 pages depending on file size
+    assert len(pages) >= 5, f"Expected at least 5 pages, got {len(pages)}"
+    # Should complete quickly (final goal is <500ms for 1000 pages)
     assert elapsed_ms < 10000, f"Parsing took {elapsed_ms}ms, expected <10000ms"
 
 

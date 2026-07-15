@@ -20,7 +20,7 @@ def test_page_count_simple(simple_pdf):
     """Test getting page count from simple PDF"""
     doc = streampdf.open(simple_pdf)
     count = doc.page_count
-    assert count >= 0
+    assert count >= 1  # Single-page PDF
 
 
 def test_metadata(simple_pdf):
@@ -42,21 +42,19 @@ def test_get_page(simple_pdf):
 
 
 def test_get_page_invalid(simple_pdf):
-    """Test getting an invalid page number - will error when PDF parsing is implemented"""
+    """Test that getting an invalid page number raises an error"""
     doc = streampdf.open(simple_pdf)
-    # For now, page(999) returns a valid PageMetadata with placeholder data
-    # When real PDF parsing is implemented, this should raise an error
-    page = doc.page(999)
-    assert page is not None
+    with pytest.raises(Exception):
+        # page(999) should raise since simple_pdf only has ~5 pages
+        doc.page(999)
 
 
 def test_all_pages(multi_page_pdf):
-    """Test getting all pages - will parse when PDF parsing is implemented"""
+    """Test getting all pages"""
     doc = streampdf.open(multi_page_pdf)
     pages = doc.all_pages
     assert isinstance(pages, list)
-    # Will have actual pages once PDF parsing is implemented
-    # For now, verify the API works
+    assert len(pages) == 5  # Multi-page PDF has 5 pages
 
 
 def test_page_metadata_fields(simple_pdf):
@@ -76,8 +74,9 @@ def test_page_metadata_fields(simple_pdf):
     assert page.width > 0
     assert page.height > 0
     assert page.rotation in [0, 90, 180, 270]
-    assert page.word_count >= 0
-    assert isinstance(page.text_preview, str)
+    # Word count should be > 0 for real PDFs
+    assert page.word_count > 0
+    assert len(page.text_preview) > 0
     assert isinstance(page.regions, list)
 
 

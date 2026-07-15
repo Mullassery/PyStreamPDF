@@ -3,6 +3,7 @@ use streampdf_core::{
     document::PdfDocument,
     page::{BoundingBox, ContentRegion, PageMetadata},
     structure::{DocumentStructure, HeadingNode, TocEntry},
+    index::{PdfIndex, PageResult},
 };
 
 #[pyclass]
@@ -69,6 +70,14 @@ impl PyPdfDocument {
     #[getter]
     fn path(&self) -> String {
         self.inner.path().to_string()
+    }
+
+    fn build_index(&self, path: String) -> PyResult<PyPdfIndex> {
+        let index = PdfIndex::build(&self.inner, &path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfIndex {
+            inner: std::sync::Arc::new(std::sync::Mutex::new(index)),
+        })
     }
 }
 
@@ -278,6 +287,85 @@ impl PyHeadingNode {
     }
 }
 
+#[pyclass]
+struct PyPageResult {
+    inner: PageResult,
+}
+
+#[pymethods]
+impl PyPageResult {
+    #[getter]
+    fn page_number(&self) -> u32 {
+        self.inner.page_number
+    }
+
+    #[getter]
+    fn score(&self) -> f32 {
+        self.inner.score
+    }
+
+    #[getter]
+    fn snippet(&self) -> String {
+        self.inner.snippet.clone()
+    }
+}
+
+#[pyclass]
+struct PyPdfIndex {
+    inner: std::sync::Arc<std::sync::Mutex<PdfIndex>>,
+}
+
+#[pymethods]
+impl PyPdfIndex {
+    #[staticmethod]
+    fn load(path: String) -> PyResult<Self> {
+        let index = PdfIndex::load(&path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok(PyPdfIndex {
+            inner: std::sync::Arc::new(std::sync::Mutex::new(index)),
+        })
+    }
+
+    fn search(&self, query: String, top_k: usize) -> PyResult<Vec<PyPageResult>> {
+        let index = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let results = index
+            .search(&query, top_k)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        Ok(results.into_iter().map(|r| PyPageResult { inner: r }).collect())
+    }
+
+    fn pages_with_heading(&self, heading: String) -> PyResult<Vec<PyPageResult>> {
+        let index = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let results = index
+            .pages_with_heading(&heading)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        Ok(results
+            .into_iter()
+            .map(|r| PyPageResult { inner: r })
+            .collect())
+    }
+
+    fn page_range(&self, start: u32, end: u32) -> PyResult<Vec<PyPageResult>> {
+        let index = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let results = index
+            .page_range(start, end)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        Ok(results
+            .into_iter()
+            .map(|r| PyPageResult { inner: r })
+            .collect())
+    }
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPdfDocument>()?;
@@ -287,12 +375,20 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDocumentStructure>()?;
     m.add_class::<PyTocEntry>()?;
     m.add_class::<PyHeadingNode>()?;
+    m.add_class::<PyPageResult>()?;
+    m.add_class::<PyPdfIndex>()?;
 
     m.add_function(wrap_pyfunction!(open, m)?)?;
+    m.add_function(wrap_pyfunction!(load_index, m)?)?;
     Ok(())
 }
 
 #[pyfunction]
 fn open(path: String) -> PyResult<PyPdfDocument> {
     PyPdfDocument::open(path)
+}
+
+#[pyfunction]
+fn load_index(path: String) -> PyResult<PyPdfIndex> {
+    PyPdfIndex::load(path)
 }
