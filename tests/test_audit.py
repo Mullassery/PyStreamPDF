@@ -1,5 +1,5 @@
 import pytest
-import streampdf
+import pystreampdf
 import os
 import json
 import tempfile

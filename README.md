@@ -89,10 +89,10 @@ Ready to see it in action? Get started immediately:
 
 ```bash
 # Using pip
-pip install streampdf
+pip install PyStreamPDF
 
 # Or using uv
-uv pip install streampdf
+uv pip install PyStreamPDF
 
 # Or from source
 git clone https://github.com/Mullassery/StreamPDF && cd StreamPDF && pip install -e .
@@ -101,10 +101,10 @@ git clone https://github.com/Mullassery/StreamPDF && cd StreamPDF && pip install
 ### 30-Second Example
 
 ```python
-import streampdf
+import pystreampdf
 
 # Open and search
-doc = streampdf.open("research_paper.pdf")
+doc = pystreampdf.open("research_paper.pdf")
 index = doc.build_index(":memory:")
 
 # Find what you need (not the whole document!)
@@ -133,10 +133,10 @@ That's it. No complex config, no wrapper scripts, no bloat.
 ### Open and Parse a PDF
 
 ```python
-import streampdf
+import pystreampdf
 
 # Open a PDF
-doc = streampdf.open("example.pdf")
+doc = pystreampdf.open("example.pdf")
 print(f"Pages: {doc.page_count}")
 
 # Get a single page
@@ -161,7 +161,7 @@ for result in results:
     print(f"Page {result.page_number}: {result.snippet}")
 
 # Persist and reload
-index2 = streampdf.load_index("doc_index.db")
+index2 = pystreampdf.load_index("doc_index.db")
 ```
 
 ### Navigate with Agent Context
@@ -187,13 +187,13 @@ for section in context.sections:
 
 ```python
 # Check if PDF is encrypted
-is_encrypted = streampdf.PdfDocument.is_encrypted("document.pdf")
+is_encrypted = pystreampdf.PdfDocument.is_encrypted("document.pdf")
 
 # Open encrypted PDF with password
-doc = streampdf.PdfDocument.open_with_password("document.pdf", "password")
+doc = pystreampdf.PdfDocument.open_with_password("document.pdf", "password")
 
 # Get document permissions
-perms = streampdf.PdfDocument.permissions("document.pdf")
+perms = pystreampdf.PdfDocument.permissions("document.pdf")
 print(f"Can copy: {perms.can_copy}, Can print: {perms.can_print}")
 
 # Fingerprint for integrity checking
@@ -201,7 +201,7 @@ fingerprint = doc.fingerprint()
 print(f"SHA-256: {fingerprint}")
 
 # Audit logging
-audit = streampdf.PyAuditLog.new("audit.jsonl")
+audit = pystreampdf.PyAuditLog.new("audit.jsonl")
 audit.record_open(doc.path)
 audit.record_search(doc.path, "query", results_count=5)
 events = audit.events()

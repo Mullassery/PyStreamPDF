@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-import streampdf
+import pystreampdf
 import time
 
 

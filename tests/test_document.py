@@ -1,6 +1,6 @@
 import pytest
 import os
-import streampdf
+import pystreampdf
 
 
 def test_open_simple_pdf(simple_pdf):

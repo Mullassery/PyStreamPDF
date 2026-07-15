@@ -1,5 +1,5 @@
 import pytest
-import streampdf
+import pystreampdf
 
 
 def test_navigator_creation(simple_pdf):

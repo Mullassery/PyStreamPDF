@@ -1,5 +1,5 @@
 import pytest
-import streampdf
+import pystreampdf
 
 
 def test_is_encrypted_normal_pdf(simple_pdf):

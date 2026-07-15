@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Basic StreamPDF usage example"""
 
-import streampdf
+import pystreampdf
 import sys
 
 if len(sys.argv) < 2:
@@ -13,7 +13,7 @@ if len(sys.argv) < 2:
 pdf_path = sys.argv[1]
 
 print(f"Opening PDF: {pdf_path}")
-doc = streampdf.open(pdf_path)
+doc = pystreampdf.open(pdf_path)
 
 print(f"\n📄 Document: {doc.path}")
 print(f"📊 Page count: {doc.page_count}")

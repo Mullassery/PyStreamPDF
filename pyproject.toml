@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "streampdf"
+name = "PyStreamPDF"
 dynamic = ["version"]
 description = "Intelligence engine for PDFs: selective retrieval, structure analysis, and token-efficient RAG"
 readme = "README.md"
@@ -33,5 +33,5 @@ Issues = "https://github.com/Mullassery/StreamPDF/issues"
 
 [tool.maturin]
 python-source = "python"
-module-name = "streampdf._core"
+module-name = "pystreampdf._core"
 manifest-path = "python/Cargo.toml"

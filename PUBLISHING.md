@@ -118,7 +118,7 @@ gh release create v1.5.0 \
 
 ### Installation
 
-pip install streampdf==1.5.0
+pip install PyStreamPDF==1.5.0
 
 ### GitHub
 
@@ -152,10 +152,10 @@ After PyPI publication (may take 5-10 minutes to be searchable):
 
 ```bash
 # Using pip
-pip install streampdf
+pip install PyStreamPDF
 
 # Using uv
-uv pip install streampdf
+uv pip install PyStreamPDF
 
 # Verify installation
 python -c "import streampdf; print(f'StreamPDF {streampdf.__version__} installed successfully')"

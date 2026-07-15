@@ -1,5 +1,5 @@
 [package]
-name = "streampdf"
+name = "pystreampdf"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

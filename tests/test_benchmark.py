@@ -1,6 +1,6 @@
 import pytest
 import time
-import streampdf
+import pystreampdf
 
 
 def test_parse_large_pdf_performance(large_pdf):
