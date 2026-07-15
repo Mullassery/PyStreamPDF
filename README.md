@@ -62,9 +62,147 @@ Not PDF parsing. Not PDF-to-Markdown conversion. But intelligent PDF access that
 
 ---
 
+## Installation
+
+### PyPI (pip)
+
+```bash
+pip install streampdf
+```
+
+### uv
+
+```bash
+uv pip install streampdf
+```
+
+### From Source
+
+```bash
+git clone https://github.com/Mullassery/StreamPDF
+cd StreamPDF
+pip install -e .
+```
+
+---
+
 ## Quick Start
 
-Coming soon. Follow the [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) for current progress.
+### Open and Parse a PDF
+
+```python
+import streampdf
+
+# Open a PDF
+doc = streampdf.open("example.pdf")
+print(f"Pages: {doc.page_count}")
+
+# Get a single page
+page = doc.page(1)
+print(f"Page 1 text: {page.text[:200]}")
+
+# Get document structure
+structure = doc.structure
+for heading in structure.headings[:5]:
+    print(f"{'  ' * heading.level}{heading.text}")
+```
+
+### Build an Index and Search
+
+```python
+# Build index for fast searching
+index = doc.build_index("doc_index.db")
+
+# Search for content
+results = index.search("machine learning", top_k=5)
+for result in results:
+    print(f"Page {result.page_number}: {result.snippet}")
+
+# Persist and reload
+index2 = streampdf.load_index("doc_index.db")
+```
+
+### Navigate with Agent Context
+
+```python
+# Create a navigator for hierarchical browsing
+nav = doc.navigator_with_index(index)
+
+# Get top-level chapters
+chapters = nav.chapters()
+for chapter in chapters:
+    print(f"Chapter: {chapter.heading.text} (pages {chapter.start_page}-{chapter.end_page})")
+
+# Retrieve context for a query with token budget
+context = nav.retrieve("attention mechanisms", max_tokens=2000)
+print(f"Query: {context.query}")
+print(f"Total tokens: {context.total_tokens}")
+for section in context.sections:
+    print(f"  {section.heading_path}: {len(section.content)} chars")
+```
+
+### Enterprise Features
+
+```python
+# Check if PDF is encrypted
+is_encrypted = streampdf.PdfDocument.is_encrypted("document.pdf")
+
+# Open encrypted PDF with password
+doc = streampdf.PdfDocument.open_with_password("document.pdf", "password")
+
+# Get document permissions
+perms = streampdf.PdfDocument.permissions("document.pdf")
+print(f"Can copy: {perms.can_copy}, Can print: {perms.can_print}")
+
+# Fingerprint for integrity checking
+fingerprint = doc.fingerprint()
+print(f"SHA-256: {fingerprint}")
+
+# Audit logging
+audit = streampdf.PyAuditLog.new("audit.jsonl")
+audit.record_open(doc.path)
+audit.record_search(doc.path, "query", results_count=5)
+events = audit.events()
+```
+
+---
+
+## Current Status: v1.5.0 (Enterprise Features)
+
+### What's Complete
+
+✅ **Phase 1a: Foundation** (v0.1)
+- Project scaffolding with Cargo workspace
+- Core data types (document, page, structure)
+- Python bindings via PyO3
+
+✅ **Phase 1b: Intelligent Indexing** (v0.5)
+- Real PDF parsing with pdfium-render
+- SQLite knowledge index with FTS5
+- Keyword search, page retrieval, index persistence
+
+✅ **Phase 2: Agent Integration** (v1.0)
+- Hierarchical heading extraction with page ranges
+- Dynamic markdown generation with token budgets
+- Token-efficient context assembly
+- PdfNavigator for structured browsing
+
+✅ **Phase 3: Enterprise Features** (v1.5) — **CURRENT**
+- Full-text FTS5 indexing (not just preview)
+- Thread-safe index sharing with Arc<Mutex>
+- Real heading level detection (H1-H4)
+- Breadcrumb paths in context sections
+- Security module (encryption detection, password handling, permissions)
+- Audit logging with JSON-lines format
+- Form field detection framework
+- Scanned PDF detection
+- SHA-256 fingerprinting
+- 48/48 tests passing
+
+### Roadmap
+
+- **v2.0** (Phase 4) — Semantic understanding, citation networks, topic hierarchies
+- **v2.5** (Phase 5+) — Advanced cost optimization, multi-format support
 
 ---
 
