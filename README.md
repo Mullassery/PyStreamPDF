@@ -1,4 +1,4 @@
-# StreamPDF
+# PyStreamPDF
 
 **The Intelligence Engine for PDFs**
 
@@ -17,7 +17,7 @@ You're using AI agents with RAG systems to work with PDFs. It works, but it's **
 
 **Example**: A 500-page user manual for a support chatbot:
 - Traditional: Convert 500 pages → 2-3 million tokens → $30-50 per conversation
-- **StreamPDF**: Find 2-3 relevant pages → 50-150k tokens → **$0.30-1.50 per conversation**
+- **PyStreamPDF**: Find 2-3 relevant pages → 50-150k tokens → **$0.30-1.50 per conversation**
 
 ### Why This Happens
 
@@ -35,12 +35,12 @@ Result: You're processing and paying for 100x more than you use
 
 ---
 
-## StreamPDF: A Better Way
+## PyStreamPDF: A Better Way
 
-Instead of converting everything, StreamPDF finds and converts **only what matters**:
+Instead of converting everything, PyStreamPDF finds and converts **only what matters**:
 
 ```
-StreamPDF Workflow (Efficient):
+PyStreamPDF Workflow (Efficient):
 1. Analyze PDF structure (no conversion needed)
 2. Find relevant pages intelligently (5-10% identified)
 3. Convert only selected sections to markdown (5-10% processed)
@@ -51,7 +51,7 @@ Result: 10-50x cost reduction with same or better accuracy
 
 ### Concrete Benefits
 
-| Problem | Traditional | StreamPDF |
+| Problem | Traditional | PyStreamPDF |
 |---------|-------------|-----------|
 | **Processing Time** | 30 seconds | 0.5 seconds |
 | **Token Usage** | 2M tokens | 50-150k tokens |
@@ -62,9 +62,9 @@ Result: 10-50x cost reduction with same or better accuracy
 
 ---
 
-## Is StreamPDF Right for You?
+## Is PyStreamPDF Right for You?
 
-### You Need StreamPDF If You:
+### You Need PyStreamPDF If You:
 - ✅ Use LLMs/AI agents to process PDFs (RAG, document Q&A, summarization)
 - ✅ Have large PDFs (100+ pages) and your token costs are growing
 - ✅ Want faster, cheaper AI-PDF interactions without sacrificing accuracy
@@ -95,7 +95,7 @@ pip install PyStreamPDF
 uv pip install PyStreamPDF
 
 # Or from source
-git clone https://github.com/Mullassery/StreamPDF && cd StreamPDF && pip install -e .
+git clone https://github.com/Mullassery/PyStreamPDF && cd PyStreamPDF && pip install -e .
 ```
 
 ### 30-Second Example
@@ -220,7 +220,7 @@ events = audit.events()
 - Cost per query: ~$1.80 (at $15/1M tokens)
 - Monthly cost (1,000 queries): **~$1,800**
 
-### StreamPDF
+### PyStreamPDF
 - Manual → Analyzed: ~0.5 seconds (structure only)
 - Pages indexed: Metadata only (no embeddings)
 - Per query tokens: 2,000 (relevant pages) + 500 (query) = 2,500 tokens  
@@ -233,7 +233,7 @@ events = audit.events()
 
 ## Feature Comparison
 
-| Feature | Traditional | StreamPDF |
+| Feature | Traditional | PyStreamPDF |
 |---------|-------------|-----------|
 | **PDF Parsing** | ⏱️ Slow | ✅ Fast |
 | **Token Efficiency** | ❌ Uses all tokens | ✅ Uses 5-10% |
@@ -285,11 +285,6 @@ events = audit.events()
 
 ---
 
-## Strategic Documents
-
-- **[STREAMPDF_VISION.md](STREAMPDF_VISION.md)** — Complete strategic vision and positioning
-- **[IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md)** — 4-phase roadmap (36 weeks to v2.0)
-
 ---
 
 ## Roadmap
@@ -302,7 +297,7 @@ events = audit.events()
 
 ---
 
-## Why StreamPDF
+## Why PyStreamPDF
 
 ### Performance First
 - Parse PDFs 10x faster than traditional approaches
@@ -337,7 +332,7 @@ Most questions require less than 1% of a PDF.
 
 Most AI systems currently process 100% anyway.
 
-StreamPDF changes that fundamental inefficiency.
+PyStreamPDF changes that fundamental inefficiency.
 
 ---
 
