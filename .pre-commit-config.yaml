@@ -1,0 +1,23 @@
+repos:
+  - repo: https://github.com/rust-lang/rust-clippy
+    rev: master
+    hooks:
+      - id: clippy
+
+  - repo: https://github.com/oxalica/nil
+    rev: 2024.07.01
+    hooks:
+      - id: rustfmt
+
+  - repo: https://github.com/psf/black
+    rev: "24.7.0"
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.8
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

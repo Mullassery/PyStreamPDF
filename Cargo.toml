@@ -1,0 +1,17 @@
+[workspace]
+members = ["core", "python"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Mullassery/StreamPDF"
+keywords = ["pdf", "retrieval", "rag", "ai", "intelligence"]
+categories = ["algorithms", "database", "science"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
