@@ -11,7 +11,7 @@ Transform PDF content into semantic knowledge:
 """
 
 from .entities import ConceptExtractor, Entity, EntityType
-from .relationships import RelationshipExtractor, Relationship
+from .relationships import RelationshipExtractor, Relationship, RelationType
 from .graph import KnowledgeGraph, GraphNode, GraphEdge
 from .citations import CitationNetwork, CitationRelation
 from .topics import TopicModel, Topic
@@ -26,6 +26,7 @@ __all__ = [
     # Relationships
     "RelationshipExtractor",
     "Relationship",
+    "RelationType",
     # Knowledge graph
     "KnowledgeGraph",
     "GraphNode",
