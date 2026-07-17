@@ -89,13 +89,13 @@ Ready to see it in action? Get started immediately:
 
 ```bash
 # Using pip
-pip install PyStreamPDF
+pip install pystreampdf
 
 # Or using uv
-uv pip install PyStreamPDF
+uv add pystreampdf
 
 # Or from source
-git clone https://github.com/Mullassery/PyStreamPDF && cd PyStreamPDF && pip install -e .
+git clone https://github.com/Mullassery/PyStreamPDF.git && cd PyStreamPDF && pip install -e .
 ```
 
 ### 30-Second Example
