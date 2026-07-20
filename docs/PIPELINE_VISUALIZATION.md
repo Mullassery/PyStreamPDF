@@ -46,24 +46,25 @@ context, flow = navigator.retrieve_with_flow(
     max_tokens=TokenBudgetConfig.get_preset("standard")  # 500 (recommended)
 )
 
-# Available presets: minimal (150), standard (500), comprehensive (1000)
+# Available presets: minimal (250), standard (500), rich (750), comprehensive (1000)
 context, flow = navigator.retrieve_with_flow(
     "query", 
-    max_tokens=TokenBudgetConfig.get_preset("comprehensive")  # 1000
+    max_tokens=TokenBudgetConfig.get_preset("rich")  # 750 for complex queries
 )
 
 # Use profiles for semantic naming
-profile = RetrievalConfig.get_profile("complex")
+profile = RetrievalConfig.get_profile("rich")
 context, flow = navigator.retrieve_with_flow(
     "query",
-    max_tokens=profile["max_tokens"]  # 1000
+    max_tokens=profile["max_tokens"]  # 750
 )
 ```
 
 **Available Presets (only these work):**
-- `minimal` (150): Essential facts only
+- `minimal` (250): Essential facts only
 - `standard` (500): RECOMMENDED - core relevant content
-- `comprehensive` (1000): For complex queries
+- `rich` (750): Richer context for complex queries
+- `comprehensive` (1000): Full context if needed
 
 **Absolute Limits (enforced):**
 - Below 100: Not allowed (loses too much context)

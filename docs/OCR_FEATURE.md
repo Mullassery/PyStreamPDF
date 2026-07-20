@@ -256,7 +256,7 @@ def extract_from_potentially_scanned_pdf(pdf_path, query):
     try:
         index = doc.build_index("/tmp/index.db")
         nav = doc.navigator_with_index(index)
-        context, flow = nav.retrieve_with_flow(query, max_tokens=150)
+        context, flow = nav.retrieve_with_flow(query, max_tokens=250)  # minimal preset
         
         extraction_loss = flow.summary.extraction_loss_pct()
         print(f"Extraction loss: {extraction_loss:.1f}%")

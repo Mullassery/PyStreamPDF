@@ -15,9 +15,10 @@ class TokenBudgetConfig:
     # Tight budgets emphasize selective extraction
     # Philosophy: Retrieve only what's relevant, nothing more
     PRESETS = {
-        "minimal": 150,        # Essential facts only
+        "minimal": 250,        # Essential facts only
         "standard": 500,       # RECOMMENDED: Core relevant content
-        "comprehensive": 1000, # More context if query is complex
+        "rich": 750,           # Richer context for complex queries
+        "comprehensive": 1000, # Full context if needed
     }
 
     # Hard limits to prevent unreasonable values
@@ -93,9 +94,13 @@ class RetrievalConfig:
             "max_tokens": TokenBudgetConfig.PRESETS["standard"],
             "description": "RECOMMENDED: Core relevant content",
         },
+        "rich": {
+            "max_tokens": TokenBudgetConfig.PRESETS["rich"],
+            "description": "Richer context for complex or multi-part queries",
+        },
         "complex": {
             "max_tokens": TokenBudgetConfig.PRESETS["comprehensive"],
-            "description": "For complex queries - more context, still selective",
+            "description": "Full context for highly complex queries - still selective",
         },
     }
 
@@ -117,17 +122,21 @@ class RetrievalConfig:
 def suggest_budget_for_use_case(use_case: str) -> int:
     """Suggest appropriate token budget for common use cases
 
-    Biased toward minimal/standard to encourage selective retrieval.
-    Use comprehensive only if standard retrieval is insufficient.
+    Biased toward selective retrieval. Use higher budgets only if
+    standard retrieval is insufficient.
     """
     suggestions = {
+        # Quick retrieval: minimal (250)
+        "extraction": TokenBudgetConfig.PRESETS["minimal"],
+
         # Most use cases: standard (500)
         "qa": TokenBudgetConfig.PRESETS["standard"],
         "chat": TokenBudgetConfig.PRESETS["standard"],
-        "code": TokenBudgetConfig.PRESETS["standard"],
-        "extraction": TokenBudgetConfig.PRESETS["minimal"],
 
-        # Complex queries may need comprehensive (1000)
+        # Code needs context: rich (750)
+        "code": TokenBudgetConfig.PRESETS["rich"],
+
+        # Complex queries need more: comprehensive (1000)
         "summarization": TokenBudgetConfig.PRESETS["comprehensive"],
         "legal": TokenBudgetConfig.PRESETS["comprehensive"],
         "research": TokenBudgetConfig.PRESETS["comprehensive"],
