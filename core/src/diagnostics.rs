@@ -3,59 +3,106 @@ use serde::{Deserialize, Serialize};
 /// Diagnosis of why text was lost during PDF parsing
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExtractionLossCause {
-    /// Scanned/image-based PDF without OCR
+    /// Scanned/image-based PDF without OCR (Optical Character Recognition)
+    /// The PDF contains images of pages instead of actual text
     ScannedPdf,
     /// Complex layout: tables, multi-column, floating elements
+    /// Parser can't extract text in correct reading order
     ComplexFormatting,
-    /// Encoded/compressed content that pdfium couldn't decompress
+    /// Encoded/compressed content that pdfium-render couldn't decompress
+    /// PDF has unusual compression or encoding
     EncodingIssue,
-    /// Embedded images with text overlay (no OCR)
+    /// Embedded images with text overlay (no OCR applied)
+    /// Text is rendered as images, not extractable
     EmbeddedImages,
     /// Form fields or interactive elements
+    /// Text in form fields not being extracted
     FormFields,
     /// Mixed content (some pages text, some scanned)
+    /// Document has both regular pages and scanned pages
     MixedContent,
     /// Unknown/cannot determine
     Unknown,
 }
 
 impl ExtractionLossCause {
-    /// Human-readable description
+    /// Human-readable description with brief explanation
     pub fn description(&self) -> &'static str {
         match self {
-            Self::ScannedPdf => "PDF is scanned or image-based (no OCR applied)",
-            Self::ComplexFormatting => "Complex page layout (tables, multi-column, floating elements)",
-            Self::EncodingIssue => "Text encoding or compression issue in PDF",
-            Self::EmbeddedImages => "Images with embedded text (no OCR)",
-            Self::FormFields => "Form fields or interactive elements",
-            Self::MixedContent => "Mixed content (some pages are scanned, some are text)",
-            Self::Unknown => "Text loss detected but cause unclear",
+            Self::ScannedPdf => {
+                "PDF is scanned or image-based (no OCR applied)\n\
+                 The PDF contains photographs/scans of pages instead of actual text.\n\
+                 Text cannot be extracted without OCR (Optical Character Recognition)."
+            }
+            Self::ComplexFormatting => {
+                "Complex page layout (tables, multi-column, floating elements)\n\
+                 Parser struggles to extract text in correct order from complex layouts.\n\
+                 Some text may be missed or garbled."
+            }
+            Self::EncodingIssue => {
+                "Text encoding or compression issue in PDF\n\
+                 PDF uses non-standard or corrupted encoding that parser cannot read.\n\
+                 Text may be compressed or encrypted in unusual ways."
+            }
+            Self::EmbeddedImages => {
+                "Images with embedded text (no OCR applied)\n\
+                 Text is rendered as part of image graphics, not as extractable text.\n\
+                 Requires OCR to read text from images."
+            }
+            Self::FormFields => {
+                "Form fields or interactive elements\n\
+                 Text stored in form fields may not be extracted by standard parsing.\n\
+                 Fill fields before extraction or flatten form."
+            }
+            Self::MixedContent => {
+                "Mixed content (some pages are scanned, some are text)\n\
+                 Document contains both regular text pages and scanned/image pages.\n\
+                 Scanned portions require OCR for text extraction."
+            }
+            Self::Unknown => {
+                "Text loss detected but cause is unclear\n\
+                 Review PDF manually to identify specific issues."
+            }
         }
     }
 
-    /// Practical remediation advice
+    /// Practical remediation advice with options
     pub fn remediation(&self) -> &'static str {
         match self {
             Self::ScannedPdf => {
-                "Quick fix: Increase token budget to compensate. Long-term: Apply OCR tool (Tesseract or similar)."
+                "QUICK FIX: Increase token budget (500→1000) to compensate for missing text.\n\
+                 BETTER: Apply OCR to convert image→text (Tesseract free, or cloud OCR).\n\
+                 HOW: Use OCR tool on scanned PDF, produces new PDF with extractable text."
             }
             Self::ComplexFormatting => {
-                "Try: Export PDF from original source, or copy text to plain document first."
+                "QUICK FIX: Verify retrieval quality is acceptable despite parsing issues.\n\
+                 TRY: Export PDF from original application (Word→PDF, Excel→PDF).\n\
+                 IF PERSISTS: Increase token budget to ensure full context."
             }
             Self::EncodingIssue => {
-                "Try: Download fresh copy of PDF, or access original source. If persists, increase token budget."
+                "QUICK FIX: Download fresh copy of PDF, re-extract.\n\
+                 IF SAME: Try accessing PDF from original source.\n\
+                 FALLBACK: Increase token budget to compensate for extraction loss."
             }
             Self::EmbeddedImages => {
-                "Quick fix: Increase token budget. Long-term: Use OCR tool on extracted images."
+                "QUICK FIX: Increase token budget (500→1000).\n\
+                 BETTER: Apply OCR to extracted images to recover text.\n\
+                 NOTE: Some embedded text may be unrecoverable without visual inspection."
             }
             Self::FormFields => {
-                "Fill visible form fields before extraction, or increase token budget to access remaining content."
+                "QUICK FIX: Increase token budget to get remaining content.\n\
+                 BETTER: Fill visible form fields before extraction.\n\
+                 OR: Use PDF tool to 'flatten' form (converts fields to regular text)."
             }
             Self::MixedContent => {
-                "Quick fix: Increase token budget to compensate. Verify retrieval quality in preview before sending to LLM."
+                "QUICK FIX: Increase token budget (1000→2000) to compensate.\n\
+                 BETTER: Separate scanned pages, apply OCR, then recombine PDF.\n\
+                 TRY: Run PDF through OCR tool (handles both text and scanned)."
             }
             Self::Unknown => {
-                "Recommended: Increase token budget to ensure full context. Verify with preview before LLM call."
+                "1. Verify retrieval in pipeline visualization before sending to LLM.\n\
+                 2. Increase token budget cautiously (150→500→1000).\n\
+                 3. If loss persists, inspect PDF manually for formatting issues."
             }
         }
     }
@@ -80,6 +127,7 @@ pub struct ExtractionDiagnostic {
     pub loss_percentage: f32,
     pub primary_cause: ExtractionLossCause,
     pub confidence: f32, // 0.0-1.0
+    pub page_range: Option<String>, // e.g., "9-12" for context
     pub explanation: String,
     pub recommended_action: String,
 }
@@ -90,6 +138,7 @@ impl ExtractionDiagnostic {
         raw_words: u32,
         extracted_words: u32,
         section_title: &str,
+        page_range: Option<&str>,
     ) -> Self {
         let loss = (raw_words as i32 - extracted_words as i32).max(0) as u32;
         let loss_pct = if raw_words > 0 {
@@ -162,16 +211,26 @@ impl ExtractionDiagnostic {
             )
         };
 
+        // Add page context to explanation
+        let explanation_with_pages = if let Some(pages) = page_range {
+            format!("Pages {}: {}", pages, explanation)
+        } else {
+            explanation
+        };
+
         let recommended_action = if loss_pct < 2.0 {
             "No action needed - extraction quality is acceptable".to_string()
         } else if loss_pct < 5.0 {
-            "Optional: Monitor extraction quality, consider format conversion if issues persist"
-                .to_string()
+            format!(
+                "Optional: Review pages {} to verify quality is acceptable",
+                page_range.unwrap_or("?")
+            )
         } else {
             format!(
-                "Recommended: {}. Loss is {:.1}% - action needed to improve retrieval quality",
+                "Recommended: {}. Loss is {:.1}% on pages {} - action needed to improve retrieval quality",
                 cause.remediation(),
-                loss_pct
+                loss_pct,
+                page_range.unwrap_or("?")
             )
         };
 
@@ -179,7 +238,8 @@ impl ExtractionDiagnostic {
             loss_percentage: loss_pct,
             primary_cause: cause,
             confidence,
-            explanation,
+            page_range: page_range.map(|s| s.to_string()),
+            explanation: explanation_with_pages,
             recommended_action,
         }
     }

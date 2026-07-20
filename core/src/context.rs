@@ -205,10 +205,12 @@ pub fn build_pipeline_flow(
 
         // Generate extraction diagnosis for this section
         let extraction_diagnosis = if raw_words > 0 && raw_words > extracted_words {
+            let pages = format!("{}-{}", chapter.start_page, chapter.end_page);
             Some(ExtractionDiagnostic::diagnose(
                 raw_words,
                 extracted_words,
                 &chapter.heading.text,
+                Some(&pages),
             ))
         } else {
             None
