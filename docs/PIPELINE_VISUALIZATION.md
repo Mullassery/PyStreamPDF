@@ -2,6 +2,15 @@
 
 PyStreamPDF now includes visualization of the complete PDF processing pipeline, showing how documents flow from extraction through to final LLM context.
 
+## Quick Reference: Common Issues & Solutions
+
+| Issue | Indicator | Solution |
+|-------|-----------|----------|
+| **Losing important context** | `[X]` markers in Select column | Increase `max_tokens` parameter |
+| **Query returns nothing** | All `[--]` in Retrieve column | Query doesn't match document; try different keywords |
+| **Extraction quality low** | High `[*]` count in Extract column | PDF is scanned/complex; requires OCR or conversion |
+| **Token budget unknown** | Unsure what to set | Use `s.retrieved_words` as `max_tokens` value |
+
 ## Overview
 
 The pipeline visualization reveals what happens at each stage:
@@ -19,7 +28,33 @@ This helps answer critical questions:
 
 ## Usage
 
-### Python API
+### Setting Token Budget
+
+The **token budget** is the `max_tokens` parameter. Increase it to include more sections:
+
+```python
+import pystreampdf
+
+doc = pystreampdf.open("document.pdf")
+index = doc.build_index("/tmp/index.db")
+navigator = doc.navigator_with_index(index)
+
+# Default budget (2000 tokens)
+context, flow = navigator.retrieve_with_flow("query", max_tokens=2000)
+
+# Increase budget to include more sections
+context, flow = navigator.retrieve_with_flow("query", max_tokens=4000)  # Double the budget
+
+# Maximum budget (no token limit filtering)
+context, flow = navigator.retrieve_with_flow("query", max_tokens=999999)  # Include all
+```
+
+**What happens:**
+- Budget `2000`: Only sections that fit in 2000 tokens are selected (others marked `[X]`)
+- Budget `4000`: Double the content included (if query matched it)
+- Budget `999999`: No filtering due to tokens (all query matches included)
+
+### Full Example
 
 ```python
 import pystreampdf
@@ -30,12 +65,18 @@ index = doc.build_index("/tmp/index.db")
 navigator = doc.navigator_with_index(index)
 
 # Retrieve with pipeline flow visualization
-context, flow = navigator.retrieve_with_flow("query text", max_tokens=2000)
+context, flow = navigator.retrieve_with_flow("your query", max_tokens=2000)
 
 # Display visualizations
 flow.to_cli_table()      # Terminal-friendly table
 flow.to_flow_diagram()   # ASCII flow diagram
 flow.to_json()           # JSON for programmatic use
+
+# Check if you're hitting token limit
+s = flow.summary
+if s.filtering_loss() > 0:
+    print(f"⚠️ {s.filtering_loss()} words filtered due to token budget")
+    print(f"  Increase max_tokens to {s.retrieved_words} to include all matches")
 ```
 
 ### CLI Output Example
@@ -230,6 +271,64 @@ For production RAG pipelines:
 - Monitor extraction loss over time
 - Track retrieval quality metrics
 - Alert on unexpected loss patterns
+
+## Troubleshooting
+
+### Problem: Seeing `[X]` in Select column (sections filtered due to token budget)
+
+**Diagnosis:**
+```python
+context, flow = navigator.retrieve_with_flow("query", max_tokens=2000)
+s = flow.summary
+
+if s.filtering_loss() > 0:
+    print(f"Problem: {s.filtering_loss()} words excluded due to token budget")
+```
+
+**Solution: Increase max_tokens**
+```python
+# Option 1: Use exact amount needed for all retrieved sections
+context, flow = navigator.retrieve_with_flow("query", max_tokens=s.retrieved_words)
+
+# Option 2: Use generous buffer (10x safety margin)
+context, flow = navigator.retrieve_with_flow("query", max_tokens=s.retrieved_words * 10)
+
+# Option 3: No limit (include everything matching query)
+context, flow = navigator.retrieve_with_flow("query", max_tokens=999999)
+```
+
+### Problem: Seeing high extraction loss `[*]` (7-15%)
+
+**Diagnosis:**
+```python
+s = flow.summary
+print(f"Extraction loss: {s.extraction_loss_pct():.1f}%")
+```
+
+**If >5%:** PDF likely scanned or has complex formatting
+
+**Solutions:**
+1. **Scanned PDF:** Re-scan with OCR or use OCR-enabled tool
+2. **Complex formatting:** Try PDF conversion (print-to-PDF in different tool)
+3. **Accept loss:** Increase token budget to compensate for missing content
+
+### Problem: Query returns nothing (all `[--]` in Retrieve)
+
+**Diagnosis:** Your query doesn't match the document
+
+**Solutions:**
+```python
+# Try different keywords
+context, flow = navigator.retrieve_with_flow("machine learning", max_tokens=2000)
+
+# Check what sections exist
+nav = doc.navigator()
+for section in nav.chapters():
+    print(f"- {section.heading.text}")
+
+# Try broader query
+context, flow = navigator.retrieve_with_flow("learning", max_tokens=2000)  # More general
+```
 
 ## Example: Full Workflow
 
