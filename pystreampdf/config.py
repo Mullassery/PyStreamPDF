@@ -12,52 +12,49 @@ from typing import Dict, Optional
 class TokenBudgetConfig:
     """Token budget configuration with preset values"""
 
-    # Reasonable ranges: balance selectivity with quality
-    # Philosophy: Retrieve only relevant sections, not everything
+    # Tight budgets emphasize selective extraction
+    # Philosophy: Retrieve only what's relevant, nothing more
     PRESETS = {
-        "minimal": 500,        # Use sparingly - bare essentials only
-        "standard": 2000,      # RECOMMENDED: Selective extraction with good quality
-        "comprehensive": 4000, # Include more context if needed
-        "maximum": 8000,       # Practical upper limit
+        "minimal": 150,        # Essential facts only
+        "standard": 500,       # RECOMMENDED: Core relevant content
+        "comprehensive": 1000, # More context if query is complex
     }
 
     # Hard limits to prevent unreasonable values
-    MIN_REASONABLE = 256      # Below this: loses too much context, diminishing returns
-    MAX_REASONABLE = 8000     # Above this: defeats PyStreamPDF's efficiency mission
+    MIN_REASONABLE = 100      # Below this: too aggressive
+    MAX_REASONABLE = 2000     # Above this: defeats PyStreamPDF's selective mission
 
     @staticmethod
     def validate(max_tokens: int) -> int:
-        """Validate token budget is within reasonable range"""
+        """Validate token budget is within allowed range
+
+        PyStreamPDF enforces strict limits to maintain selectivity:
+        - Below 100: Loses too much context
+        - Above 2000: Defeats selective extraction mission
+
+        No exceptions to these limits.
+        """
         if max_tokens < TokenBudgetConfig.MIN_REASONABLE:
             raise ValueError(
-                f"max_tokens={max_tokens} too low. "
-                f"Minimum reasonable: {TokenBudgetConfig.MIN_REASONABLE}. "
-                f"Use presets: {list(TokenBudgetConfig.PRESETS.keys())}"
+                f"max_tokens={max_tokens} not allowed. "
+                f"Minimum: {TokenBudgetConfig.MIN_REASONABLE} (use presets: "
+                f"{', '.join(TokenBudgetConfig.PRESETS.keys())})"
             )
         if max_tokens > TokenBudgetConfig.MAX_REASONABLE:
             raise ValueError(
-                f"max_tokens={max_tokens} too high. "
-                f"Maximum reasonable: {TokenBudgetConfig.MAX_REASONABLE}. "
-                f"Use presets: {list(TokenBudgetConfig.PRESETS.keys())}"
+                f"max_tokens={max_tokens} not allowed. "
+                f"Maximum: {TokenBudgetConfig.MAX_REASONABLE} (use presets: "
+                f"{', '.join(TokenBudgetConfig.PRESETS.keys())})"
             )
         return max_tokens
 
     @staticmethod
     def suggest_increase(current: int, retrieved_words: int, model: str = "default") -> int:
-        """Suggest a reasonable token budget increase"""
-        # Model-specific limits
-        model_limits = {
-            "gpt-3.5": 4000,
-            "gpt-4": 8000,
-            "claude-3-haiku": 4000,
-            "claude-3-sonnet": 8000,
-            "claude-3-opus": 16000,  # Capped at MAX_REASONABLE
-            "default": TokenBudgetConfig.MAX_REASONABLE,
-        }
+        """Suggest a reasonable token budget increase
 
-        model_limit = model_limits.get(model, TokenBudgetConfig.MAX_REASONABLE)
-        model_limit = min(model_limit, TokenBudgetConfig.MAX_REASONABLE)
-
+        Returns the smallest preset that can fit the content,
+        capped at MAX_REASONABLE to maintain selectivity.
+        """
         # Estimate tokens from words (rough: 1.3 tokens per word)
         estimated_tokens = int(retrieved_words * 1.3)
 
@@ -66,10 +63,12 @@ class TokenBudgetConfig:
             return TokenBudgetConfig.PRESETS["minimal"]
         elif estimated_tokens <= TokenBudgetConfig.PRESETS["standard"]:
             return TokenBudgetConfig.PRESETS["standard"]
-        elif estimated_tokens <= TokenBudgetConfig.PRESETS["generous"]:
-            return TokenBudgetConfig.PRESETS["generous"]
+        elif estimated_tokens <= TokenBudgetConfig.PRESETS["comprehensive"]:
+            return TokenBudgetConfig.PRESETS["comprehensive"]
         else:
-            return min(estimated_tokens, model_limit)
+            # Even if more tokens needed, cap at MAX_REASONABLE
+            # (encourages query refinement over unlimited extraction)
+            return TokenBudgetConfig.MAX_REASONABLE
 
     @staticmethod
     def get_preset(name: str) -> int:
@@ -88,19 +87,15 @@ class RetrievalConfig:
     PROFILES = {
         "extraction": {
             "max_tokens": TokenBudgetConfig.PRESETS["minimal"],
-            "description": "Bare essentials only - fastest, lowest cost",
+            "description": "Essential facts only - fastest, lowest cost",
         },
         "default": {
             "max_tokens": TokenBudgetConfig.PRESETS["standard"],
-            "description": "RECOMMENDED: Selective extraction with quality",
+            "description": "RECOMMENDED: Core relevant content",
         },
-        "quality": {
+        "complex": {
             "max_tokens": TokenBudgetConfig.PRESETS["comprehensive"],
-            "description": "More context if query needs it - still selective",
-        },
-        "premium": {
-            "max_tokens": TokenBudgetConfig.PRESETS["maximum"],
-            "description": "Highest quality results while staying selective",
+            "description": "For complex queries - more context, still selective",
         },
     }
 
@@ -122,17 +117,20 @@ class RetrievalConfig:
 def suggest_budget_for_use_case(use_case: str) -> int:
     """Suggest appropriate token budget for common use cases
 
-    All suggestions favor selectivity over comprehensiveness.
-    If you need more context, verify retrieval quality first.
+    Biased toward minimal/standard to encourage selective retrieval.
+    Use comprehensive only if standard retrieval is insufficient.
     """
     suggestions = {
+        # Most use cases: standard (500)
         "qa": TokenBudgetConfig.PRESETS["standard"],
         "chat": TokenBudgetConfig.PRESETS["standard"],
         "code": TokenBudgetConfig.PRESETS["standard"],
+        "extraction": TokenBudgetConfig.PRESETS["minimal"],
+
+        # Complex queries may need comprehensive (1000)
         "summarization": TokenBudgetConfig.PRESETS["comprehensive"],
         "legal": TokenBudgetConfig.PRESETS["comprehensive"],
         "research": TokenBudgetConfig.PRESETS["comprehensive"],
-        "extraction": TokenBudgetConfig.PRESETS["minimal"],
     }
 
     if use_case.lower() not in suggestions:
@@ -146,21 +144,21 @@ def suggest_budget_for_use_case(use_case: str) -> int:
 USAGE_EXAMPLES = """
 # Use preset
 from pystreampdf.config import TokenBudgetConfig
-budget = TokenBudgetConfig.get_preset("standard")  # 2000 tokens
+budget = TokenBudgetConfig.get_preset("standard")  # 500 tokens (recommended)
 
 # Use profile
 from pystreampdf.config import RetrievalConfig
-config = RetrievalConfig.get_profile("thorough")
+config = RetrievalConfig.get_profile("complex")
 navigator.retrieve_with_flow(query, max_tokens=config["max_tokens"])
 
 # Suggest based on retrieval results
 budget = TokenBudgetConfig.suggest_increase(
-    current=2000,
-    retrieved_words=3000,
-    model="claude-3-opus"  # Respects model limits
+    current=500,
+    retrieved_words=600,
+    model="claude-3-opus"  # Capped at MAX_REASONABLE (2000)
 )
 
 # Use case-based
 from pystreampdf.config import suggest_budget_for_use_case
-budget = suggest_budget_for_use_case("legal")  # Returns 8000
+budget = suggest_budget_for_use_case("legal")  # Returns 1000 (comprehensive)
 """

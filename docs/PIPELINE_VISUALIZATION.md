@@ -30,7 +30,7 @@ This helps answer critical questions:
 
 ### Setting Token Budget
 
-The **token budget** is the `max_tokens` parameter. Use reasonable preset values:
+The **token budget** is the `max_tokens` parameter. You must use preset values within allowed range.
 
 ```python
 import pystreampdf
@@ -40,36 +40,37 @@ doc = pystreampdf.open("document.pdf")
 index = doc.build_index("/tmp/index.db")
 navigator = doc.navigator_with_index(index)
 
-# Use presets (validated for all models)
+# Use presets (only valid option)
 context, flow = navigator.retrieve_with_flow(
     "query", 
-    max_tokens=TokenBudgetConfig.get_preset("standard")  # 2000 (default)
+    max_tokens=TokenBudgetConfig.get_preset("standard")  # 500 (recommended)
 )
 
-# Available presets: minimal (500), standard (2000), generous (4000), maximum (8000)
+# Available presets: minimal (150), standard (500), comprehensive (1000)
 context, flow = navigator.retrieve_with_flow(
     "query", 
-    max_tokens=TokenBudgetConfig.get_preset("generous")  # 4000
+    max_tokens=TokenBudgetConfig.get_preset("comprehensive")  # 1000
 )
 
-# Use profiles (include description)
-profile = RetrievalConfig.get_profile("thorough")
+# Use profiles for semantic naming
+profile = RetrievalConfig.get_profile("complex")
 context, flow = navigator.retrieve_with_flow(
     "query",
-    max_tokens=profile["max_tokens"]  # 4000
+    max_tokens=profile["max_tokens"]  # 1000
 )
 ```
 
-**Preset Budgets:**
-- `minimal` (500): Quick extraction, minimal context
-- `standard` (2000): Balanced (default)
-- `generous` (4000): More comprehensive
-- `maximum` (8000): Maximum practical
+**Available Presets (only these work):**
+- `minimal` (150): Essential facts only
+- `standard` (500): RECOMMENDED - core relevant content
+- `comprehensive` (1000): For complex queries
 
-**Hard Limits:**
-- Minimum: 256 tokens (must capture something)
-- Maximum: 16000 tokens (reasonable for most LLMs)
-- Outside range: Raises error with guidance
+**Absolute Limits (enforced):**
+- Below 100: Not allowed (loses too much context)
+- Above 2000: Not allowed (defeats selective extraction)
+- Custom values outside presets: Raises error
+
+No exceptions to these limits. They define PyStreamPDF's selectivity mission.
 
 ### Full Example
 
