@@ -11,6 +11,7 @@ pub mod navigator;
 pub mod security;
 pub mod audit;
 pub mod forms;
+pub mod pipeline;
 
 pub use document::PdfDocument;
 pub use error::{Error, Result};
@@ -24,3 +25,4 @@ pub use navigator::PdfNavigator;
 pub use security::{PdfPermissions, EncryptionStatus};
 pub use audit::{AuditEvent, AuditEventKind};
 pub use forms::{PdfFormField, FormFieldType};
+pub use pipeline::{PipelineFlow, SectionFlow, PipelineSummary};

@@ -5,6 +5,7 @@ use crate::heading_extractor::{extract_hierarchy, HeadingSection, HierarchicalHe
 use crate::index::PdfIndex;
 use crate::markdown::{self, MarkdownOutput};
 use crate::page::PageMetadata;
+use crate::pipeline::PipelineFlow;
 use std::sync::{Arc, Mutex};
 
 /// Wrapper to hold references for the navigator, since owned types can't be cloned for Python.
@@ -94,6 +95,42 @@ impl PdfNavigator {
             &pages,
             max_tokens,
         ))
+    }
+
+    /// Retrieve context and get pipeline flow visualization data
+    pub fn retrieve_with_flow(&self, query: &str, max_tokens: u32) -> Result<(AgentContext, PipelineFlow)> {
+        let index_arc = self.index.as_ref().ok_or_else(|| {
+            crate::error::Error::StructureError("No index available; call with_shared_index() first".to_string())
+        })?;
+
+        let index = index_arc
+            .lock()
+            .map_err(|_| crate::error::Error::StructureError("Index lock poisoned".to_string()))?;
+
+        let results = index.search(query, 10)?;
+        drop(index); // Release lock
+
+        let doc = PdfDocument::open(&self.data.doc_path)?;
+        let pages = doc.all_pages()?;
+
+        let context = context::assemble(
+            query,
+            &results,
+            &self.data.hierarchy,
+            &pages,
+            max_tokens,
+        );
+
+        let flow = context::build_pipeline_flow(
+            query,
+            &self.data.hierarchy,
+            &pages,
+            &results,
+            &context,
+            max_tokens,
+        );
+
+        Ok((context, flow))
     }
 
     /// Generate markdown for a section.

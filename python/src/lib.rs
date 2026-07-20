@@ -11,6 +11,7 @@ use streampdf_core::{
     security::PdfPermissions,
     audit::{AuditLog, AuditEvent, AuditEventKind},
     forms::PdfFormField,
+    pipeline::{PipelineFlow, SectionFlow, PipelineSummary},
 };
 use std::sync::{Arc, Mutex};
 
@@ -518,6 +519,190 @@ impl PyAgentContext {
 }
 
 #[pyclass]
+struct PySectionFlow {
+    inner: SectionFlow,
+}
+
+#[pymethods]
+impl PySectionFlow {
+    #[getter]
+    fn title(&self) -> String {
+        self.inner.title.clone()
+    }
+
+    #[getter]
+    fn pages(&self) -> String {
+        self.inner.pages.clone()
+    }
+
+    #[getter]
+    fn raw_words(&self) -> u32 {
+        self.inner.raw_words
+    }
+
+    #[getter]
+    fn extracted_words(&self) -> u32 {
+        self.inner.extracted_words
+    }
+
+    #[getter]
+    fn indexed_words(&self) -> u32 {
+        self.inner.indexed_words
+    }
+
+    #[getter]
+    fn retrieved_words(&self) -> u32 {
+        self.inner.retrieved_words
+    }
+
+    #[getter]
+    fn selected_words(&self) -> u32 {
+        self.inner.selected_words
+    }
+
+    #[getter]
+    fn selected(&self) -> bool {
+        self.inner.selected
+    }
+
+    #[getter]
+    fn relevance_score(&self) -> Option<f32> {
+        self.inner.relevance_score
+    }
+
+    #[getter]
+    fn reason(&self) -> Option<String> {
+        self.inner.reason.clone()
+    }
+
+    fn extraction_loss(&self) -> u32 {
+        self.inner.extraction_loss()
+    }
+
+    fn indexing_loss(&self) -> u32 {
+        self.inner.indexing_loss()
+    }
+
+    fn retrieval_loss(&self) -> u32 {
+        self.inner.retrieval_loss()
+    }
+
+    fn filtering_loss(&self) -> u32 {
+        self.inner.filtering_loss()
+    }
+
+    fn extraction_loss_pct(&self) -> f32 {
+        self.inner.extraction_loss_pct()
+    }
+}
+
+#[pyclass]
+struct PyPipelineSummary {
+    inner: PipelineSummary,
+}
+
+#[pymethods]
+impl PyPipelineSummary {
+    #[getter]
+    fn raw_words(&self) -> u32 {
+        self.inner.raw_words
+    }
+
+    #[getter]
+    fn extracted_words(&self) -> u32 {
+        self.inner.extracted_words
+    }
+
+    #[getter]
+    fn indexed_words(&self) -> u32 {
+        self.inner.indexed_words
+    }
+
+    #[getter]
+    fn retrieved_words(&self) -> u32 {
+        self.inner.retrieved_words
+    }
+
+    #[getter]
+    fn selected_words(&self) -> u32 {
+        self.inner.selected_words
+    }
+
+    fn extraction_loss(&self) -> u32 {
+        self.inner.extraction_loss()
+    }
+
+    fn indexing_loss(&self) -> u32 {
+        self.inner.indexing_loss()
+    }
+
+    fn retrieval_loss(&self) -> u32 {
+        self.inner.retrieval_loss()
+    }
+
+    fn filtering_loss(&self) -> u32 {
+        self.inner.filtering_loss()
+    }
+
+    fn extraction_loss_pct(&self) -> f32 {
+        self.inner.extraction_loss_pct()
+    }
+
+    fn retrieval_loss_pct(&self) -> f32 {
+        self.inner.retrieval_loss_pct()
+    }
+
+    fn filtering_loss_pct(&self) -> f32 {
+        self.inner.filtering_loss_pct()
+    }
+}
+
+#[pyclass]
+struct PyPipelineFlow {
+    inner: PipelineFlow,
+}
+
+#[pymethods]
+impl PyPipelineFlow {
+    #[getter]
+    fn query(&self) -> String {
+        self.inner.query.clone()
+    }
+
+    #[getter]
+    fn sections(&self) -> Vec<PySectionFlow> {
+        self.inner
+            .sections
+            .iter()
+            .map(|s| PySectionFlow {
+                inner: s.clone(),
+            })
+            .collect()
+    }
+
+    #[getter]
+    fn summary(&self) -> PyPipelineSummary {
+        PyPipelineSummary {
+            inner: self.inner.summary.clone(),
+        }
+    }
+
+    fn to_cli_table(&self) -> String {
+        self.inner.to_cli_table()
+    }
+
+    fn to_flow_diagram(&self) -> String {
+        self.inner.to_flow_diagram()
+    }
+
+    fn to_json(&self) -> PyResult<String> {
+        self.inner
+            .to_json()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
+    }
+}
+
+#[pyclass]
 struct PyHeadingSection {
     inner: HeadingSection,
 }
@@ -577,6 +762,17 @@ impl PyPdfNavigator {
             .retrieve(&query, max_tokens)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
         Ok(PyAgentContext { inner: ctx })
+    }
+
+    fn retrieve_with_flow(&self, query: String, max_tokens: u32) -> PyResult<(PyAgentContext, PyPipelineFlow)> {
+        let nav = self
+            .inner
+            .lock()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyIOError, _>("Lock poisoned"))?;
+        let (ctx, flow) = nav
+            .retrieve_with_flow(&query, max_tokens)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
+        Ok((PyAgentContext { inner: ctx }, PyPipelineFlow { inner: flow }))
     }
 
     fn section_to_markdown(&self, section: &PyHeadingSection, max_tokens: u32) -> PyResult<PyMarkdownOutput> {
@@ -751,6 +947,9 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMarkdownOutput>()?;
     m.add_class::<PyContextSection>()?;
     m.add_class::<PyAgentContext>()?;
+    m.add_class::<PySectionFlow>()?;
+    m.add_class::<PyPipelineSummary>()?;
+    m.add_class::<PyPipelineFlow>()?;
     m.add_class::<PyHeadingSection>()?;
     m.add_class::<PyPdfNavigator>()?;
     m.add_class::<PyPdfPermissions>()?;
