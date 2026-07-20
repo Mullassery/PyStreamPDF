@@ -41,6 +41,7 @@ from .ocr import (
 from .config import (
     TokenBudgetConfig,
     RetrievalConfig,
+    FilteringConfig,
     suggest_budget_for_use_case,
 )
 
@@ -68,5 +69,6 @@ __all__ = [
     "process_scanned_pdf",
     "TokenBudgetConfig",
     "RetrievalConfig",
+    "FilteringConfig",
     "suggest_budget_for_use_case",
 ]

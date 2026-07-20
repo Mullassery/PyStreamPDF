@@ -119,6 +119,76 @@ class RetrievalConfig:
         return f"{name}: {profile['description']} ({profile['max_tokens']} tokens)"
 
 
+class FilteringConfig:
+    """Configuration for filtering stage (relevance scoring and selection)"""
+
+    # Filtering strategies with different strictness levels
+    STRATEGIES = {
+        "strict": {
+            "min_relevance_score": 0.7,    # Only high-confidence matches
+            "max_sections": 3,              # Limit to top 3 sections
+            "require_threshold": True,      # Must meet minimum score
+            "description": "Only highest relevance - minimal, focused output",
+        },
+        "balanced": {
+            "min_relevance_score": 0.5,    # Moderate confidence
+            "max_sections": 5,              # RECOMMENDED: balanced set
+            "require_threshold": True,
+            "description": "RECOMMENDED: High-quality selections",
+        },
+        "lenient": {
+            "min_relevance_score": 0.3,    # Broader matches
+            "max_sections": 10,             # Include more sections
+            "require_threshold": False,     # Allow lower scores if relevant
+            "description": "Broader retrieval for comprehensive coverage",
+        },
+    }
+
+    # Hard limits to maintain quality
+    MIN_RELEVANCE_SCORE = 0.1    # Below this: score is meaningless
+    MAX_RELEVANCE_SCORE = 1.0    # Perfect match
+    MIN_MAX_SECTIONS = 1         # At least one section
+    MAX_MAX_SECTIONS = 20        # Don't over-retrieve
+
+    @staticmethod
+    def get_strategy(name: str) -> Dict:
+        """Get filtering strategy by name"""
+        if name not in FilteringConfig.STRATEGIES:
+            available = ", ".join(FilteringConfig.STRATEGIES.keys())
+            raise ValueError(f"Unknown strategy '{name}'. Available: {available}")
+        return FilteringConfig.STRATEGIES[name]
+
+    @staticmethod
+    def validate_relevance_score(score: float) -> float:
+        """Validate relevance score is in valid range [0.1, 1.0]"""
+        if score < FilteringConfig.MIN_RELEVANCE_SCORE:
+            raise ValueError(
+                f"Relevance score {score} too low. "
+                f"Minimum: {FilteringConfig.MIN_RELEVANCE_SCORE}"
+            )
+        if score > FilteringConfig.MAX_RELEVANCE_SCORE:
+            raise ValueError(
+                f"Relevance score {score} too high. "
+                f"Maximum: {FilteringConfig.MAX_RELEVANCE_SCORE}"
+            )
+        return score
+
+    @staticmethod
+    def validate_max_sections(count: int) -> int:
+        """Validate max sections is in valid range"""
+        if count < FilteringConfig.MIN_MAX_SECTIONS:
+            raise ValueError(
+                f"Max sections {count} too low. "
+                f"Minimum: {FilteringConfig.MIN_MAX_SECTIONS}"
+            )
+        if count > FilteringConfig.MAX_MAX_SECTIONS:
+            raise ValueError(
+                f"Max sections {count} too high. "
+                f"Maximum: {FilteringConfig.MAX_MAX_SECTIONS}"
+            )
+        return count
+
+
 def suggest_budget_for_use_case(use_case: str) -> int:
     """Suggest appropriate token budget for common use cases
 
