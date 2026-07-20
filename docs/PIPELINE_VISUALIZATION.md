@@ -67,7 +67,7 @@ context, flow = navigator.retrieve_with_flow(
 - `comprehensive` (1000): Full context if needed
 
 **Absolute Limits (enforced):**
-- Below 100: Not allowed (loses too much context)
+- Below 250: Not allowed (loses too much context)
 - Above 2000: Not allowed (defeats selective extraction)
 - Custom values outside presets: Raises error
 
