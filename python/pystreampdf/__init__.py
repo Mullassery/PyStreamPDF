@@ -52,6 +52,14 @@ from .search import (
     combine_filters,
 )
 
+from .query_analyzer import (
+    QueryAnalyzer,
+    AutoBudgetSelector,
+    QueryAnalysis,
+    TokenBudgetLevel,
+    auto_select_budget,
+)
+
 __all__ = [
     # Core (optional)
     *((["open", "load_index"]) if open and load_index else []),
@@ -83,4 +91,10 @@ __all__ = [
     "SearchFilter",
     "SearchResults",
     "combine_filters",
+    # Query analysis & auto-budget selection
+    "QueryAnalyzer",
+    "AutoBudgetSelector",
+    "QueryAnalysis",
+    "TokenBudgetLevel",
+    "auto_select_budget",
 ]
