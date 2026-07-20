@@ -3,6 +3,7 @@ use crate::index::PageResult;
 use crate::markdown;
 use crate::page::PageMetadata;
 use crate::pipeline::{PipelineFlow, SectionFlow, PipelineSummary};
+use crate::diagnostics::ExtractionDiagnostic;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -202,6 +203,17 @@ pub fn build_pipeline_flow(
         total_retrieved += retrieved_words;
         total_selected += selected_words;
 
+        // Generate extraction diagnosis for this section
+        let extraction_diagnosis = if raw_words > 0 && raw_words > extracted_words {
+            Some(ExtractionDiagnostic::diagnose(
+                raw_words,
+                extracted_words,
+                &chapter.heading.text,
+            ))
+        } else {
+            None
+        };
+
         section_flows.push(SectionFlow {
             title: chapter.heading.text.clone(),
             pages: format!("{}-{}", chapter.start_page, chapter.end_page),
@@ -213,6 +225,7 @@ pub fn build_pipeline_flow(
             selected: selected_words > 0,
             relevance_score,
             reason,
+            extraction_diagnosis,
         });
     }
 
@@ -224,9 +237,33 @@ pub fn build_pipeline_flow(
         selected_words: total_selected,
     };
 
+    // Generate overall extraction diagnosis
+    let sections_with_loss = section_flows.iter().filter(|s| s.extraction_diagnosis.is_some()).count();
+    let overall_extraction_diagnosis = if total_raw > total_extracted && !section_flows.is_empty() {
+        let diag = crate::diagnostics::PipelineDiagnostics::diagnose(
+            total_raw,
+            total_extracted,
+            sections_with_loss,
+            section_flows.len(),
+        );
+        Some(format!(
+            "{}\n\nDiagnosis: {}\nSeverity: {}/5\nRecommended actions:\n{}",
+            diag.summary,
+            diag.most_likely_cause.description(),
+            diag.severity_level,
+            diag.action_items.iter().enumerate()
+                .map(|(i, action)| format!("{}. {}", i + 1, action))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ))
+    } else {
+        None
+    };
+
     PipelineFlow {
         query: query.to_string(),
         sections: section_flows,
         summary,
+        overall_extraction_diagnosis,
     }
 }

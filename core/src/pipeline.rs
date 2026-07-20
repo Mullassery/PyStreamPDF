@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::diagnostics::{ExtractionDiagnostic, ExtractionLossCause};
 
 /// Tracks a section's journey through the extraction/retrieval pipeline
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,6 +14,7 @@ pub struct SectionFlow {
     pub selected: bool,
     pub relevance_score: Option<f32>,
     pub reason: Option<String>, // why it was filtered (e.g., "exceeds_token_budget", "not_relevant")
+    pub extraction_diagnosis: Option<ExtractionDiagnostic>, // why text was lost
 }
 
 impl SectionFlow {
@@ -47,6 +49,7 @@ pub struct PipelineFlow {
     pub query: String,
     pub sections: Vec<SectionFlow>,
     pub summary: PipelineSummary,
+    pub overall_extraction_diagnosis: Option<String>, // Why overall extraction loss happened
 }
 
 /// Summary statistics for the entire pipeline

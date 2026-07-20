@@ -272,6 +272,63 @@ For production RAG pipelines:
 - Track retrieval quality metrics
 - Alert on unexpected loss patterns
 
+## Extraction Loss Diagnosis
+
+When the pipeline shows text loss during extraction (the `[*]` marker), PyStreamPDF automatically diagnoses the likely cause:
+
+### Automatic Diagnosis
+
+```python
+context, flow = navigator.retrieve_with_flow("query", max_tokens=2000)
+
+# Check per-section diagnosis
+for section in flow.sections:
+    if section.extraction_diagnosis:
+        diag = section.extraction_diagnosis
+        print(f"{section.title}:")
+        print(f"  Loss: {diag.loss_percentage:.1f}%")
+        print(f"  Likely cause: {diag.primary_cause}")  # (enum)
+        print(f"  Explanation: {diag.explanation}")
+        print(f"  Action: {diag.recommended_action}")
+```
+
+### Diagnosis Types
+
+| Loss % | Likely Cause | Explanation | Quick Fix |
+|--------|--------------|-------------|-----------|
+| <2% | Minor formatting | Punctuation/whitespace normalization | None needed |
+| 2-5% | Complex formatting | Tables, multi-column, floating elements | Increase token budget if needed |
+| 5-10% | Scanned or complex | PDF parsing limitations | Increase token budget |
+| 10-25% | Mixed content | Scanned pages mixed with text | Increase token budget + preview before LLM |
+| >25% | Scanned/encoded | PDF is primarily image-based | Significant token budget increase required |
+
+### Diagnosis Confidence
+
+Each diagnosis includes a confidence score (0.0-1.0):
+- `>0.8`: High confidence (likely accurate)
+- `0.6-0.8`: Medium confidence (probable, but verify)
+- `<0.6`: Low confidence (ambiguous, needs verification)
+
+### Overall Pipeline Diagnosis
+
+Check the overall extraction diagnosis:
+
+```python
+if flow.overall_extraction_diagnosis:
+    print(flow.overall_extraction_diagnosis)
+```
+
+Example output:
+```
+Extraction quality degraded - 7.7% loss affecting 50% of sections
+
+Diagnosis: PDF is scanned or image-based (no OCR applied)
+Severity: 3/5
+Recommended actions:
+1. Increase token budget to compensate
+2. Verify retrieval quality in pipeline visualization
+```
+
 ## Troubleshooting
 
 ### Problem: Seeing `[X]` in Select column (sections filtered due to token budget)
@@ -299,18 +356,35 @@ context, flow = navigator.retrieve_with_flow("query", max_tokens=999999)
 
 ### Problem: Seeing high extraction loss `[*]` (7-15%)
 
-**Diagnosis:**
+**Automatic Diagnosis:**
+PyStreamPDF automatically identifies the cause. Check the diagnosis:
+
 ```python
-s = flow.summary
-print(f"Extraction loss: {s.extraction_loss_pct():.1f}%")
+context, flow = navigator.retrieve_with_flow("query", max_tokens=2000)
+
+# Overall diagnosis
+print(flow.overall_extraction_diagnosis)
+
+# Per-section diagnosis
+for section in flow.sections:
+    if section.extraction_diagnosis:
+        print(f"\n{section.title}:")
+        print(f"  Loss: {section.extraction_diagnosis.loss_percentage:.1f}%")
+        print(f"  Cause: {section.extraction_diagnosis.primary_cause}")
+        print(f"  Confidence: {section.extraction_diagnosis.confidence:.0%}")
+        print(f"  Fix: {section.extraction_diagnosis.recommended_action}")
 ```
 
-**If >5%:** PDF likely scanned or has complex formatting
+**Most Common Fix:** Increase `max_tokens` parameter
+```python
+# Quick fix - use auto-suggested budget
+context, flow = navigator.retrieve_with_flow("query", max_tokens=flow.summary.retrieved_words)
+```
 
-**Solutions:**
-1. **Scanned PDF:** Re-scan with OCR or use OCR-enabled tool
-2. **Complex formatting:** Try PDF conversion (print-to-PDF in different tool)
-3. **Accept loss:** Increase token budget to compensate for missing content
+**If Problem Persists:**
+- Scanned PDF: Consider OCR tool (Tesseract, but optional - token budget increase often sufficient)
+- Complex formatting: Try exporting PDF from original source first
+- Encoding issue: Download fresh copy of PDF
 
 ### Problem: Query returns nothing (all `[--]` in Retrieve)
 
