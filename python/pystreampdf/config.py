@@ -12,26 +12,26 @@ from typing import Dict, Optional
 class TokenBudgetConfig:
     """Token budget configuration with preset values"""
 
-    # Tight budgets emphasize selective extraction
+    # Balanced budgets for practical LLM context constraints
     # Philosophy: Retrieve only what's relevant, nothing more
     PRESETS = {
-        "minimal": 250,        # Essential facts only
-        "standard": 500,       # RECOMMENDED: Core relevant content
-        "rich": 750,           # Richer context for complex queries
-        "comprehensive": 1000, # Full context if needed
+        "minimal": 500,        # Single focused section (~385 words)
+        "standard": 1500,      # RECOMMENDED: 1-2 medium sections (~1155 words)
+        "rich": 2000,          # Richer context for complex queries (~1540 words)
+        "comprehensive": 2750, # Deep analysis with multiple sections (~2115 words)
     }
 
     # Hard limits to prevent unreasonable values
-    MIN_REASONABLE = 250      # Below this: too aggressive, loses context
-    MAX_REASONABLE = 1000     # Above this: defeats PyStreamPDF's selective mission
+    MIN_REASONABLE = 500      # Below this: too aggressive, loses context
+    MAX_REASONABLE = 2750     # Above this: defeats PyStreamPDF's selective mission
 
     @staticmethod
     def validate(max_tokens: int) -> int:
         """Validate token budget is within allowed range
 
         PyStreamPDF enforces strict limits to maintain selectivity:
-        - Below 250: Loses too much context
-        - Above 1000: Defeats selective extraction mission
+        - Below 500: Loses too much context
+        - Above 2750: Defeats selective extraction mission
 
         No exceptions to these limits.
         """
@@ -64,6 +64,8 @@ class TokenBudgetConfig:
             return TokenBudgetConfig.PRESETS["minimal"]
         elif estimated_tokens <= TokenBudgetConfig.PRESETS["standard"]:
             return TokenBudgetConfig.PRESETS["standard"]
+        elif estimated_tokens <= TokenBudgetConfig.PRESETS["rich"]:
+            return TokenBudgetConfig.PRESETS["rich"]
         elif estimated_tokens <= TokenBudgetConfig.PRESETS["comprehensive"]:
             return TokenBudgetConfig.PRESETS["comprehensive"]
         else:
@@ -196,17 +198,17 @@ def suggest_budget_for_use_case(use_case: str) -> int:
     standard retrieval is insufficient.
     """
     suggestions = {
-        # Quick retrieval: minimal (250)
+        # Quick retrieval: minimal (500)
         "extraction": TokenBudgetConfig.PRESETS["minimal"],
 
-        # Most use cases: standard (500)
+        # Most use cases: standard (1500)
         "qa": TokenBudgetConfig.PRESETS["standard"],
         "chat": TokenBudgetConfig.PRESETS["standard"],
 
-        # Code needs context: rich (750)
+        # Code needs context: rich (2000)
         "code": TokenBudgetConfig.PRESETS["rich"],
 
-        # Complex queries need more: comprehensive (1000)
+        # Complex queries need more: comprehensive (2750)
         "summarization": TokenBudgetConfig.PRESETS["comprehensive"],
         "legal": TokenBudgetConfig.PRESETS["comprehensive"],
         "research": TokenBudgetConfig.PRESETS["comprehensive"],

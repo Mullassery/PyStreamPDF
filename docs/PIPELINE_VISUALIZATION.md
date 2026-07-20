@@ -43,32 +43,32 @@ navigator = doc.navigator_with_index(index)
 # Use presets (only valid option)
 context, flow = navigator.retrieve_with_flow(
     "query", 
-    max_tokens=TokenBudgetConfig.get_preset("standard")  # 500 (recommended)
+    max_tokens=TokenBudgetConfig.get_preset("standard")  # 1500 (recommended)
 )
 
-# Available presets: minimal (250), standard (500), rich (750), comprehensive (1000)
+# Available presets: minimal (500), standard (1500), rich (2000), comprehensive (2750)
 context, flow = navigator.retrieve_with_flow(
     "query", 
-    max_tokens=TokenBudgetConfig.get_preset("rich")  # 750 for complex queries
+    max_tokens=TokenBudgetConfig.get_preset("rich")  # 2000 for complex queries
 )
 
 # Use profiles for semantic naming
 profile = RetrievalConfig.get_profile("rich")
 context, flow = navigator.retrieve_with_flow(
     "query",
-    max_tokens=profile["max_tokens"]  # 750
+    max_tokens=profile["max_tokens"]  # 2000
 )
 ```
 
 **Available Presets (only these work):**
-- `minimal` (250): Essential facts only
-- `standard` (500): RECOMMENDED - core relevant content
-- `rich` (750): Richer context for complex queries
-- `comprehensive` (1000): Full context if needed
+- `minimal` (500): Single focused section (~385 words)
+- `standard` (1500): RECOMMENDED - 1-2 medium sections (~1155 words)
+- `rich` (2000): Richer context for complex queries (~1540 words)
+- `comprehensive` (2750): Deep analysis with multiple sections (~2115 words)
 
 **Absolute Limits (enforced):**
-- Below 250: Not allowed (loses too much context)
-- Above 1000: Not allowed (defeats selective extraction)
+- Below 500: Not allowed (loses too much context)
+- Above 2750: Not allowed (defeats selective extraction)
 - Custom values outside presets: Raises error
 
 No exceptions to these limits. They define PyStreamPDF's selectivity mission.
