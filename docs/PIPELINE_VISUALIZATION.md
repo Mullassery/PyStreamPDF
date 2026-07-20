@@ -30,29 +30,46 @@ This helps answer critical questions:
 
 ### Setting Token Budget
 
-The **token budget** is the `max_tokens` parameter. Increase it to include more sections:
+The **token budget** is the `max_tokens` parameter. Use reasonable preset values:
 
 ```python
 import pystreampdf
+from pystreampdf.config import TokenBudgetConfig, RetrievalConfig
 
 doc = pystreampdf.open("document.pdf")
 index = doc.build_index("/tmp/index.db")
 navigator = doc.navigator_with_index(index)
 
-# Default budget (2000 tokens)
-context, flow = navigator.retrieve_with_flow("query", max_tokens=2000)
+# Use presets (validated for all models)
+context, flow = navigator.retrieve_with_flow(
+    "query", 
+    max_tokens=TokenBudgetConfig.get_preset("standard")  # 2000 (default)
+)
 
-# Increase budget to include more sections
-context, flow = navigator.retrieve_with_flow("query", max_tokens=4000)  # Double the budget
+# Available presets: minimal (500), standard (2000), generous (4000), maximum (8000)
+context, flow = navigator.retrieve_with_flow(
+    "query", 
+    max_tokens=TokenBudgetConfig.get_preset("generous")  # 4000
+)
 
-# Maximum budget (no token limit filtering)
-context, flow = navigator.retrieve_with_flow("query", max_tokens=999999)  # Include all
+# Use profiles (include description)
+profile = RetrievalConfig.get_profile("thorough")
+context, flow = navigator.retrieve_with_flow(
+    "query",
+    max_tokens=profile["max_tokens"]  # 4000
+)
 ```
 
-**What happens:**
-- Budget `2000`: Only sections that fit in 2000 tokens are selected (others marked `[X]`)
-- Budget `4000`: Double the content included (if query matched it)
-- Budget `999999`: No filtering due to tokens (all query matches included)
+**Preset Budgets:**
+- `minimal` (500): Quick extraction, minimal context
+- `standard` (2000): Balanced (default)
+- `generous` (4000): More comprehensive
+- `maximum` (8000): Maximum practical
+
+**Hard Limits:**
+- Minimum: 256 tokens (must capture something)
+- Maximum: 16000 tokens (reasonable for most LLMs)
+- Outside range: Raises error with guidance
 
 ### Full Example
 
