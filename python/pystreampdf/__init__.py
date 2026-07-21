@@ -4,7 +4,7 @@ Intelligent PDF parsing, retrieval, and context extraction for AI agents.
 Reduces token usage by 10-50x while maintaining accuracy.
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 # Optional: Rust core bindings (requires maturin build)
 try:

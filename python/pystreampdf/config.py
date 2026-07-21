@@ -12,26 +12,26 @@ from typing import Dict, Optional
 class TokenBudgetConfig:
     """Token budget configuration with preset values"""
 
-    # Balanced budgets for practical LLM context constraints
+    # Expanded budgets for richer context retrieval
     # Philosophy: Retrieve only what's relevant, nothing more
     PRESETS = {
-        "minimal": 500,        # Single focused section (~385 words)
-        "standard": 1500,      # RECOMMENDED: 1-2 medium sections (~1155 words)
-        "rich": 2000,          # Richer context for complex queries (~1540 words)
-        "comprehensive": 2750, # Deep analysis with multiple sections (~2115 words)
+        "minimal": 650,        # Single focused section (~500 words)
+        "standard": 2500,      # RECOMMENDED: 2-3 medium sections (~1923 words)
+        "rich": 3000,          # Richer context for complex queries (~2307 words)
+        "comprehensive": 3500, # Deep analysis with multiple sections (~2692 words)
     }
 
     # Hard limits to prevent unreasonable values
-    MIN_REASONABLE = 500      # Below this: too aggressive, loses context
-    MAX_REASONABLE = 2750     # Above this: defeats PyStreamPDF's selective mission
+    MIN_REASONABLE = 650      # Below this: too aggressive, loses context
+    MAX_REASONABLE = 3500     # Above this: defeats PyStreamPDF's selective mission
 
     @staticmethod
     def validate(max_tokens: int) -> int:
         """Validate token budget is within allowed range
 
         PyStreamPDF enforces strict limits to maintain selectivity:
-        - Below 500: Loses too much context
-        - Above 2750: Defeats selective extraction mission
+        - Below 650: Loses too much context
+        - Above 3500: Defeats selective extraction mission
 
         No exceptions to these limits.
         """

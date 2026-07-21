@@ -147,16 +147,16 @@ strategy = FilteringConfig.get_strategy("lenient")
 
 ### 📊 Updated Token Budget Scale
 
-More practical 4-slab design for modern LLMs:
+Expanded 4-slab design for richer context retrieval:
 
 ```python
 from pystreampdf.config import TokenBudgetConfig
 
-# Available presets (hard limits: 500-2750)
-minimal      = TokenBudgetConfig.get_preset("minimal")        # 500 tokens (~385 words)
-standard     = TokenBudgetConfig.get_preset("standard")       # 1500 tokens (~1155 words) ⭐ RECOMMENDED
-rich         = TokenBudgetConfig.get_preset("rich")           # 2000 tokens (~1540 words)
-comprehensive = TokenBudgetConfig.get_preset("comprehensive") # 2750 tokens (~2115 words)
+# Available presets (hard limits: 650-3500)
+minimal      = TokenBudgetConfig.get_preset("minimal")        # 650 tokens (~500 words)
+standard     = TokenBudgetConfig.get_preset("standard")       # 2500 tokens (~1923 words) ⭐ RECOMMENDED
+rich         = TokenBudgetConfig.get_preset("rich")           # 3000 tokens (~2307 words)
+comprehensive = TokenBudgetConfig.get_preset("comprehensive") # 3500 tokens (~2692 words)
 
 # Use with navigator
 context, flow = navigator.retrieve_with_flow(
