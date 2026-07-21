@@ -13,15 +13,15 @@
 You're using AI agents with RAG systems to work with PDFs. It works, but it's **wasteful and expensive**:
 
 ### The Painful Truth
-- 📄 A 100-page technical manual takes **10-30 seconds to convert** (if using multi-GPU)
-- 💰 Your token costs are **10-50x higher** than necessary
-- 🔍 You generate embeddings for content your agent will **never use**
-- ⏱️ API calls are slow because you're passing entire document context
-- 💾 Storage costs balloon as you keep full markdown versions
+- A 100-page technical manual takes **10-30 seconds to convert** (if using multi-GPU)
+- Your token costs are **10-50x higher** than necessary
+- You generate embeddings for content your agent will **never use**
+-  API calls are slow because you're passing entire document context
+- Storage costs balloon as you keep full markdown versions
 
 **Example**: A 500-page user manual for a support chatbot:
-- Traditional: Convert 500 pages → 2-3 million tokens → $30-50 per conversation
-- **PyStreamPDF**: Find 2-3 relevant pages → 50-150k tokens → **$0.30-1.50 per conversation**
+- Traditional: Convert 500 pages  2-3 million tokens  $30-50 per conversation
+- **PyStreamPDF**: Find 2-3 relevant pages  50-150k tokens  **$0.30-1.50 per conversation**
 
 ### Why This Happens
 
@@ -69,19 +69,19 @@ Result: 10-50x cost reduction with same or better accuracy
 ## Is PyStreamPDF Right for You?
 
 ### You Need PyStreamPDF If You:
-- ✅ Use LLMs/AI agents to process PDFs (RAG, document Q&A, summarization)
-- ✅ Have large PDFs (100+ pages) and your token costs are growing
-- ✅ Want faster, cheaper AI-PDF interactions without sacrificing accuracy
-- ✅ Need to handle multiple PDF formats (technical docs, manuals, reports)
-- ✅ Work with encryption or permissions (secure PDFs)
-- ✅ Want production-ready, tested code (not experiments)
+- Use LLMs/AI agents to process PDFs (RAG, document Q&A, summarization)
+- Have large PDFs (100+ pages) and your token costs are growing
+- Want faster, cheaper AI-PDF interactions without sacrificing accuracy
+- Need to handle multiple PDF formats (technical docs, manuals, reports)
+- Work with encryption or permissions (secure PDFs)
+- Want production-ready, tested code (not experiments)
 
 ### Use Cases
-- 📚 **Document Q&A**: Support chatbots, knowledge base search
-- 📊 **Data Extraction**: Pull specific information from reports
-- 📖 **Summarization**: Quick summaries without processing entire documents
-- 🔍 **Research**: Find citations and relevant sections across large archives
-- 🔒 **Compliance & Audit**: Contract analysis, compliance workflows
+- **Document Q&A**: Support chatbots, knowledge base search
+- **Data Extraction**: Pull specific information from reports
+- **Summarization**: Quick summaries without processing entire documents
+- **Research**: Find citations and relevant sections across large archives
+- **Compliance & Audit**: Contract analysis, compliance workflows
 
 ---
 
@@ -150,7 +150,7 @@ print(f"Page 1 text: {page.text[:200]}")
 # Get document structure
 structure = doc.structure
 for heading in structure.headings[:5]:
-    print(f"{'  ' * heading.level}{heading.text}")
+ print(f"{' ' * heading.level}{heading.text}")
 ```
 
 ### Build an Index and Search
@@ -162,7 +162,7 @@ index = doc.build_index("doc_index.db")
 # Search for content
 results = index.search("machine learning", top_k=5)
 for result in results:
-    print(f"Page {result.page_number}: {result.snippet}")
+ print(f"Page {result.page_number}: {result.snippet}")
 
 # Persist and reload
 index2 = pystreampdf.load_index("doc_index.db")
@@ -177,14 +177,14 @@ nav = doc.navigator_with_index(index)
 # Get top-level chapters
 chapters = nav.chapters()
 for chapter in chapters:
-    print(f"Chapter: {chapter.heading.text} (pages {chapter.start_page}-{chapter.end_page})")
+ print(f"Chapter: {chapter.heading.text} (pages {chapter.start_page}-{chapter.end_page})")
 
 # Retrieve context for a query with token budget
 context = nav.retrieve("attention mechanisms", max_tokens=2000)
 print(f"Query: {context.query}")
 print(f"Total tokens: {context.total_tokens}")
 for section in context.sections:
-    print(f"  {section.heading_path}: {len(section.content)} chars")
+ print(f" {section.heading_path}: {len(section.content)} chars")
 ```
 
 ### Security & Compliance Features
@@ -218,16 +218,16 @@ events = audit.events()
 **Processing a 300-page technical manual with GPT-4 for support queries:**
 
 ### Traditional RAG System
-- Manual → Markdown: ~20 seconds
-- Embeddings generated: 300 pages × 400 tokens = 120,000 tokens
+- Manual  Markdown: ~20 seconds
+- Embeddings generated: 300 pages  400 tokens = 120,000 tokens
 - Per query tokens: 120,000 (full doc) + 500 (query) = 120,500 tokens
 - Cost per query: ~$1.80 (at $15/1M tokens)
 - Monthly cost (1,000 queries): **~$1,800**
 
 ### PyStreamPDF
-- Manual → Analyzed: ~0.5 seconds (structure only)
+- Manual  Analyzed: ~0.5 seconds (structure only)
 - Pages indexed: Metadata only (no embeddings)
-- Per query tokens: 2,000 (relevant pages) + 500 (query) = 2,500 tokens  
+- Per query tokens: 2,000 (relevant pages) + 500 (query) = 2,500 tokens 
 - Cost per query: ~$0.04 (at $15/1M tokens)
 - Monthly cost (1,000 queries): **~$40**
 
@@ -239,17 +239,17 @@ events = audit.events()
 
 | Feature | Traditional | PyStreamPDF |
 |---------|-------------|-----------|
-| **PDF Parsing** | ⏱️ Slow | ✅ Fast |
-| **Token Efficiency** | ❌ Uses all tokens | ✅ Uses 5-10% |
-| **Retrieval Speed** | ❌ Slow (full context) | ✅ <50ms |
-| **Cost per Query** | ❌ $1-10 | ✅ $0.01-1 |
-| **Large Documents** | ❌ Memory issues >100 pages | ✅ Handles 1000+ pages |
-| **Structured Navigation** | ❌ Manual parsing | ✅ Automatic hierarchy |
-| **Security Support** | ❌ Basic | ✅ Encryption, permissions, audit |
-| **Semantic Understanding** | ❌ None | ✅ Entities, relationships, knowledge graphs |
-| **Fact Verification** | ❌ None | ✅ Grounding, hallucination detection |
-| **Intelligent Assembly** | ❌ Fixed order | ✅ 4 adaptive strategies |
-| **Production Ready** | ❌ Experimental | ✅ 94/94 tests passing |
+| **PDF Parsing** |  Slow | Fast |
+| **Token Efficiency** | Uses all tokens | Uses 5-10% |
+| **Retrieval Speed** | Slow (full context) | <50ms |
+| **Cost per Query** | $1-10 | $0.01-1 |
+| **Large Documents** | Memory issues >100 pages | Handles 1000+ pages |
+| **Structured Navigation** | Manual parsing | Automatic hierarchy |
+| **Security Support** | Basic | Encryption, permissions, audit |
+| **Semantic Understanding** | None | Entities, relationships, knowledge graphs |
+| **Fact Verification** | None | Grounding, hallucination detection |
+| **Intelligent Assembly** | Fixed order | 4 adaptive strategies |
+| **Production Ready** | Experimental | 94/94 tests passing |
 
 ---
 
@@ -257,23 +257,23 @@ events = audit.events()
 
 ### What's Complete
 
-✅ **Phase 1a: Foundation** (v0.1)
+ **Phase 1a: Foundation** (v0.1)
 - Project scaffolding with Cargo workspace
 - Core data types (document, page, structure)
 - Python bindings via PyO3
 
-✅ **Phase 1b: Intelligent Indexing** (v0.5)
+ **Phase 1b: Intelligent Indexing** (v0.5)
 - Real PDF parsing with pdfium-render
 - SQLite knowledge index with FTS5
 - Keyword search, page retrieval, index persistence
 
-✅ **Phase 2: Agent Integration** (v1.0)
+ **Phase 2: Agent Integration** (v1.0)
 - Hierarchical heading extraction with page ranges
 - Dynamic markdown generation with token budgets
 - Token-efficient context assembly
 - PdfNavigator for structured browsing
 
-✅ **Phase 3: Advanced Features** (v1.5)
+ **Phase 3: Advanced Features** (v1.5)
 - Full-text FTS5 indexing (not just preview)
 - Thread-safe index sharing with Arc<Mutex>
 - Real heading level detection (H1-H4)
@@ -284,7 +284,7 @@ events = audit.events()
 - Scanned PDF detection
 - SHA-256 fingerprinting
 
-✅ **Phase 4: Semantic Intelligence** (v2.0) — **CURRENT** (94 tests passing)
+ **Phase 4: Semantic Intelligence** (v2.0) — **CURRENT** (94 tests passing)
 
 **Phase 4.1: Entity Extraction** (19 tests)
 - Concept extraction: persons, organizations, locations, concepts, methods, metrics, dates
