@@ -7,7 +7,7 @@ Assemble optimal context for AI queries using multiple strategies:
 - Tutorial: Progressive complexity
 """
 
-from typing import List, Optional, Dict, Tuple, Set
+from typing import List, Optional, Dict, Tuple, Set, Any
 from enum import Enum
 from dataclasses import dataclass, field
 
@@ -40,17 +40,19 @@ class ContextAssembler:
     optimal context for AI agent queries using multiple strategies.
     """
 
-    def __init__(self, knowledge_graph=None, citation_network=None, chunks: Optional[List[Tuple[str, int]]] = None):
+    def __init__(self, knowledge_graph=None, citation_network=None, chunks: Optional[List[Tuple[str, int]]] = None, token_budget_config=None):
         """Initialize assembler.
 
         Args:
             knowledge_graph: KnowledgeGraph instance
             citation_network: CitationNetwork instance
             chunks: List of (text, source_id) tuples
+            token_budget_config: Optional TokenBudgetConfig for dynamic budget evaluation
         """
         self.graph = knowledge_graph
         self.citations = citation_network
         self.chunks = chunks or []
+        self.token_budget_config = token_budget_config
 
         # Token estimation
         self.avg_tokens_per_char = 1 / 4.0  # Approximate: 4 chars per token
@@ -60,27 +62,37 @@ class ContextAssembler:
         query: str,
         max_tokens: int = 2000,
         strategy: AssemblyStrategy = AssemblyStrategy.SCHOLARLY,
+        document_context: Optional[Dict[str, Any]] = None,
     ) -> AssembledContext:
         """Assemble optimal context for query.
 
         Args:
             query: Query/question to build context for
-            max_tokens: Maximum tokens to include
+            max_tokens: Maximum tokens to include (can be overridden by token_budget_config)
             strategy: Assembly strategy to use
+            document_context: Optional dict with 'filename', 'title', 'content_preview' for budget evaluation
 
         Returns:
             AssembledContext with assembled content
         """
+        evaluated_max_tokens = max_tokens
+        if self.token_budget_config and document_context:
+            evaluated_max_tokens = self.token_budget_config.evaluate(
+                filename=document_context.get("filename", ""),
+                title=document_context.get("title"),
+                content_preview=document_context.get("content_preview"),
+            )
+
         if strategy == AssemblyStrategy.SCHOLARLY:
-            return self._assemble_scholarly(query, max_tokens)
+            return self._assemble_scholarly(query, evaluated_max_tokens)
         elif strategy == AssemblyStrategy.TECHNICAL:
-            return self._assemble_technical(query, max_tokens)
+            return self._assemble_technical(query, evaluated_max_tokens)
         elif strategy == AssemblyStrategy.SURVEY:
-            return self._assemble_survey(query, max_tokens)
+            return self._assemble_survey(query, evaluated_max_tokens)
         elif strategy == AssemblyStrategy.TUTORIAL:
-            return self._assemble_tutorial(query, max_tokens)
+            return self._assemble_tutorial(query, evaluated_max_tokens)
         else:
-            return self._assemble_scholarly(query, max_tokens)
+            return self._assemble_scholarly(query, evaluated_max_tokens)
 
     def _assemble_scholarly(self, query: str, max_tokens: int) -> AssembledContext:
         """Assemble using scholarly strategy (citation importance).

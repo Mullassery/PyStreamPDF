@@ -29,6 +29,10 @@ from .extraction import (
     TextFragment,
 )
 
+# Caching and token budget configuration
+from .token_budget import TokenBudgetConfig, BudgetRule
+from .cache import PDFCache, CachedDocument
+
 __all__ = [
     # Core (optional)
     *((["open", "load_index"]) if open and load_index else []),
@@ -45,4 +49,9 @@ __all__ = [
     "MultimediaElement",
     "SourceLocation",
     "TextFragment",
+    # Caching and token budgets
+    "TokenBudgetConfig",
+    "BudgetRule",
+    "PDFCache",
+    "CachedDocument",
 ]

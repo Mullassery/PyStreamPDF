@@ -328,6 +328,7 @@ class SemanticChunker:
         page_start: int,
         page_end: int,
         heading_path: Optional[str] = None,
+        budget_override: Optional[int] = None,
     ) -> List[ContentChunk]:
         """Create semantic chunks from content.
 
@@ -337,11 +338,13 @@ class SemanticChunker:
             page_start: Starting page
             page_end: Ending page
             heading_path: Hierarchical heading path
+            budget_override: Optional token budget to use instead of self.target_tokens
 
         Returns:
             List of content chunks
         """
         chunks = []
+        target_tokens = budget_override if budget_override is not None else self.target_tokens
 
         if element_type == ElementType.TABLE:
             # Tables stay as single chunks
@@ -364,7 +367,7 @@ class SemanticChunker:
                 para_tokens = int(len(para) * self.token_ratio)
 
                 # New chunk if adding this paragraph exceeds target
-                if current_tokens + para_tokens > self.target_tokens and current_chunk_text:
+                if current_tokens + para_tokens > target_tokens and current_chunk_text:
                     chunk_content = "\n\n".join(current_chunk_text)
                     chunks.append(ContentChunk(
                         content=chunk_content,
