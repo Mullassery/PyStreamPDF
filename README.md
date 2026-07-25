@@ -460,7 +460,7 @@ pip install paddleocr
 - 94 tests passing
 - Security-aware (encryption, audit)
 - Handles 1000+ page documents
-- MIT Licensed
+- Proprietary Licensed
 
 ---
 
@@ -489,7 +489,7 @@ PyStreamPDF converts 1% to use 100% of that.
 
 ## License
 
-MIT License — See [LICENSE](LICENSE) for details
+Proprietary License — See [LICENSE](LICENSE) for details
 
 ---
 

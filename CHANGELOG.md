@@ -219,7 +219,7 @@ All notable changes to StreamPDF are documented here.
 - maturin build system
 - pyproject.toml with PyPI metadata
 - Python 3.9+ support
-- MIT License
+- Proprietary License
 
 #### Testing
 - 15 integration tests
@@ -247,4 +247,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon)
 
 ## License
 
-MIT License — See [LICENSE](LICENSE)
+Proprietary License — See [LICENSE](LICENSE)
