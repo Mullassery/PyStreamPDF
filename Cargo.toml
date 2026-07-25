@@ -6,7 +6,6 @@ resolver = "2"
 version = "2.2.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
-license = "MIT"
 repository = "https://github.com/Mullassery/StreamPDF"
 keywords = ["pdf", "retrieval", "rag", "ai", "intelligence"]
 categories = ["algorithms", "database", "science"]

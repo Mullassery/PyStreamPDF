@@ -7,7 +7,7 @@ name = "PyStreamPDF"
 dynamic = ["version"]
 description = "Intelligence engine for PDFs: selective retrieval, structure analysis, and token-efficient RAG"
 readme = "README.md"
-license = { text = "MIT" }
+
 authors = [{ name = "Georgi Mammen Mullassery", email = "mullassery@gmail.com" }]
 keywords = ["pdf", "retrieval", "rag", "ai", "intelligence", "search", "indexing"]
 classifiers = [
