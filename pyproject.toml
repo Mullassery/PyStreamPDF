@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "PyStreamPDF"
 dynamic = ["version"]
-description = "Intelligence engine for PDFs: selective retrieval, structure analysis, and token-efficient RAG"
+description = "Intelligence engine for PDFs. Selective retrieval, structure analysis, technical intelligence extraction. 10-50x cost reduction through token-efficient RAG."
 readme = "README.md"
 
 authors = [{ name = "Georgi Mammen Mullassery", email = "mullassery@gmail.com" }]
