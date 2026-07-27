@@ -1,68 +1,43 @@
-# Rust
-/target/
-Cargo.lock
-**/*.rs.bk
+# Sensitive files and credentials
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+credentials.json
+secrets.json
+.credentials
+config.local.*
+.config.local
+oauth_tokens.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
+dist/
+build/
+.pytest_cache/
 
 # Virtual environments
 venv/
-ENV/
 env/
+.venv
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
+# Rust
+target/
+Cargo.lock
 
-# Build artifacts
-.cargo
-*.o
-*.a
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Documentation
-site/
-
-# Internal strategy/research docs (keep locally, don't commit)
-ARCHITECTURE.md
-COMPETITIVE_ANALYSIS.md
-IMPLEMENTATION_ROADMAP.md
-RESEARCH_FINDINGS_*.md
-RESEARCH_METHODOLOGY.md
-RESEARCH_OVERVIEW.md
-RESEARCH_ROADMAP_WEEK_BY_WEEK.md
-RESEARCH_*.txt
-STREAMPDF_VISION.md
-STREAMPDF_RESEARCH_PHASE.md
-STREAMPDF_CACHING_STRATEGY.md
-STRUCTURAL_METADATA_STRATEGY.md
-WEEK1_PLAN.md
+# Temp files
+*.tmp
+*.log
+temp/
+tmp/
