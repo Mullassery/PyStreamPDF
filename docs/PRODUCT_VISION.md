@@ -1,30 +1,65 @@
-# PyStreamPDF v2.0.0: Product Vision
+# PyStreamPDF v2.1.0: Product Vision
 
 ## Mission
 
-**PDF Intelligence & Token-Efficient RAG**
+**Intelligent PDF Processing with Smart Token Budget Management**
 
-Part of the unified MCP 2.0 Platform (228 tools across 19 projects).
+Optimize LLM context usage through dynamic token allocation and semantic document understanding. Part of the unified MCP 2.0 Platform (207 tools across 18 projects).
+
+## Core Innovation: Token Budget Multipliers
+
+PyStreamPDF introduces intelligent token allocation that adapts to document complexity:
+
+- **Base allocation**: 1000 tokens (configurable via base_budget)
+- **Dynamic scaling**: 500-1000 tokens via keyword-based multiplier rules
+- **Hard constraints**: Prevents token overflow and under-allocation
+- **Zero configuration**: Works out-of-the-box with sensible defaults
+
+Example: Financial reports automatically receive higher allocation (1.2× multiplier) while summaries receive lower allocation (0.8× multiplier), all within the fixed 500-1000 range.
 
 ## Product Role in MCP 2.0 Platform
 
 ### Architecture Position
-- **Layer:** Document Processing Layer
+- **Layer:** Document Processing & Context Optimization
 - **Port:** 8780 (MCP endpoint)
-- **Tools:** 12 MCP tools
-- **Status:** Production Ready (v2.0.0)
+- **Tools:** 12 MCP tools + token budget management
+- **Status:** Production Ready (v2.1.0)
+
+### Core Capabilities
+1. **Token Budget Management** (NEW)
+   - Keyword-based multiplier rules
+   - Automatic scaling within constraints
+   - Multi-field matching (filename, title, content)
+   - YAML and Python configuration
+
+2. **Document Processing**
+   - Multi-format extraction (text, tables, images, OCR)
+   - Semantic chunking with token awareness
+   - Layout preservation and heading hierarchy
+
+3. **Intelligent Caching**
+   - L1 memory + L2 disk dual-tier caching
+   - Budget re-evaluation on cache hits
+   - File hash-based invalidation
+
+4. **Quality Assurance**
+   - Text, table, and image validation
+   - Confidence scoring
+   - Corruption detection
 
 ### Integration Points
-- **Depends on:** StatGuardian
-- **Used by:** PyInferenceManager, PyStreamMCP
+- **Depends on:** StatGuardian (quality metrics)
+- **Used by:** PyInferenceManager (inference optimization), PyStreamMCP (context orchestration)
 
-## Key Capabilities (v2.0.0)
+## Key Capabilities (v2.1.0)
 
-- PDF parsing & extraction
-- Token-efficient retrieval
-- Semantic search
-- Document classification
-- Layout preservation
+- **Smart token budgeting** (500-1000 range with multiplier scaling)
+- **Semantic chunking** with budget constraints
+- **PDF extraction** (text, tables, images, OCR)
+- **Dual-tier caching** with budget awareness
+- **Multi-field matching** for keyword rules
+- **Production validation** (quality checks with confidence)
+- **Zero configuration** defaults
 
 ## MCP 2.0 Integration
 

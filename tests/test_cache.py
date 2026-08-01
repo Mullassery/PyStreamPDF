@@ -214,30 +214,30 @@ class TestPDFCache:
             return sample_chunks, "preview text", "Test Title", 2
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # First config: "tmp" files get 2x (sample_pdf_path has "tmp" in its name)
+            # First config: "xyz_marker" files get 1.2x (sample_pdf_path won't match)
             config1 = TokenBudgetConfig(
-                base_budget=2000,
-                rules=[BudgetRule("xyz_marker", 2.0, match_fields=["filename"])],
+                base_budget=800,
+                rules=[BudgetRule("xyz_marker", 1.2, match_fields=["filename"])],
             )
             cache = PDFCache(disk_cache_dir=tmpdir, token_budget_config=config1)
 
             # Process a file (with first config - no match)
             doc1 = cache.get_or_process(sample_pdf_path, mock_process)
-            assert doc1.evaluated_budget == 2000
+            assert doc1.evaluated_budget == 800
 
             # Update config to match the actual filename pattern
             filename = Path(sample_pdf_path).name
             keyword = filename.split('.')[0][:3]  # Match first 3 chars of filename
 
             config2 = TokenBudgetConfig(
-                base_budget=2000,
-                rules=[BudgetRule(keyword, 3.0, match_fields=["filename"])],
+                base_budget=800,
+                rules=[BudgetRule(keyword, 1.1, match_fields=["filename"])],
             )
             cache.token_budget_config = config2
 
             # Hit same cache with new config - budget should be re-evaluated
             doc2 = cache.get_or_process(sample_pdf_path, mock_process)
-            assert doc2.evaluated_budget == 6000  # 2000 * 3.0
+            assert doc2.evaluated_budget == 880  # 800 * 1.1
 
     def test_ttl_expiry_reprocesses(self, sample_pdf_path, sample_chunks):
         """Test that expired cache entries are reprocessed."""

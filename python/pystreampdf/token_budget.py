@@ -47,8 +47,11 @@ class TokenBudgetConfig:
     Allows defining rules that multiply the base token budget based on
     keywords found in PDF metadata. Multipliers stack multiplicatively.
 
+    The MIN_BUDGET and MAX_BUDGET class constants can be modified in Python
+    to customize the budget constraints for your use case.
+
     Example YAML:
-        base_budget: 2000
+        base_budget: 1000
         rules:
           - keyword: "financial"
             multiplier: 2.0
@@ -58,14 +61,14 @@ class TokenBudgetConfig:
             match_fields: ["filename"]
     """
 
-    MIN_BUDGET = 100
-    MAX_BUDGET = 32000
+    MIN_BUDGET = 500
+    MAX_BUDGET = 1000
 
-    def __init__(self, base_budget: int = 2000, rules: Optional[List[BudgetRule]] = None):
+    def __init__(self, base_budget: int = 1000, rules: Optional[List[BudgetRule]] = None):
         """Initialize token budget configuration.
 
         Args:
-            base_budget: Default token budget if no rules match (default 2000)
+            base_budget: Default token budget if no rules match (default 1000)
             rules: List of BudgetRule objects to evaluate
         """
         self.base_budget = base_budget
@@ -99,7 +102,7 @@ class TokenBudgetConfig:
         Returns:
             TokenBudgetConfig instance
         """
-        base_budget = data.get("base_budget", 2000)
+        base_budget = data.get("base_budget", 1000)
         rules_data = data.get("rules", [])
 
         rules = []

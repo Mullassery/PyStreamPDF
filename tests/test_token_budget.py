@@ -50,52 +50,52 @@ class TestTokenBudgetConfig:
 
     def test_no_rules_returns_base_budget(self):
         """Test that no rules returns base budget unchanged."""
-        config = TokenBudgetConfig(base_budget=2000, rules=[])
-        assert config.evaluate("report.pdf") == 2000
-        assert config.evaluate("financial_report.pdf") == 2000
+        config = TokenBudgetConfig(base_budget=800, rules=[])
+        assert config.evaluate("report.pdf") == 800
+        assert config.evaluate("financial_report.pdf") == 800
 
     def test_single_rule_match(self):
         """Test single rule that matches."""
-        rule = BudgetRule("financial", 2.0, match_fields=["filename"])
-        config = TokenBudgetConfig(base_budget=2000, rules=[rule])
+        rule = BudgetRule("financial", 1.1, match_fields=["filename"])
+        config = TokenBudgetConfig(base_budget=800, rules=[rule])
 
-        assert config.evaluate("financial_report.pdf") == 4000
-        assert config.evaluate("summary_report.pdf") == 2000
+        assert config.evaluate("financial_report.pdf") == 880
+        assert config.evaluate("summary_report.pdf") == 800
 
     def test_multiple_rules_stack_multiplicatively(self):
         """Test that multiple matching rules multiply."""
         rules = [
-            BudgetRule("financial", 2.0, match_fields=["filename"]),
-            BudgetRule("quarterly", 3.0, match_fields=["filename"]),
+            BudgetRule("financial", 1.05, match_fields=["filename"]),
+            BudgetRule("quarterly", 1.06, match_fields=["filename"]),
         ]
-        config = TokenBudgetConfig(base_budget=2000, rules=rules)
+        config = TokenBudgetConfig(base_budget=800, rules=rules)
 
-        # Both match: 2000 * 2.0 * 3.0 = 12000
-        assert config.evaluate("financial_quarterly_report.pdf") == 12000
-        # Only first matches: 2000 * 2.0 = 4000
-        assert config.evaluate("financial_report.pdf") == 4000
-        # Neither matches: 2000
-        assert config.evaluate("summary.pdf") == 2000
+        # Both match: 800 * 1.05 * 1.06 = 890.4 ≈ 890
+        assert config.evaluate("financial_quarterly_report.pdf") == 890
+        # Only first matches: 800 * 1.05 = 840
+        assert config.evaluate("financial_report.pdf") == 840
+        # Neither matches: 800
+        assert config.evaluate("summary.pdf") == 800
 
     def test_budget_clamped_to_max(self):
         """Test that budget is clamped to MAX_BUDGET."""
         rules = [
-            BudgetRule("financial", 10.0, match_fields=["filename"]),
+            BudgetRule("financial", 1.5, match_fields=["filename"]),
         ]
-        config = TokenBudgetConfig(base_budget=5000, rules=rules)
+        config = TokenBudgetConfig(base_budget=800, rules=rules)
 
-        # 5000 * 10.0 = 50000, should be clamped to 32000
+        # 800 * 1.5 = 1200, should be clamped to 1000
         result = config.evaluate("financial_report.pdf")
         assert result == TokenBudgetConfig.MAX_BUDGET
 
     def test_budget_clamped_to_min(self):
         """Test that budget is clamped to MIN_BUDGET."""
         rules = [
-            BudgetRule("summary", 0.01, match_fields=["filename"]),
+            BudgetRule("summary", 0.4, match_fields=["filename"]),
         ]
         config = TokenBudgetConfig(base_budget=1000, rules=rules)
 
-        # 1000 * 0.01 = 10, should be clamped to 100
+        # 1000 * 0.4 = 400, should be clamped to 500
         result = config.evaluate("summary.pdf")
         assert result == TokenBudgetConfig.MIN_BUDGET
 
@@ -169,30 +169,30 @@ rules:
     def test_complex_matching(self):
         """Test complex multi-field matching scenario."""
         rules = [
-            BudgetRule("legal", 3.0, match_fields=["filename", "title", "content_preview"]),
-            BudgetRule("compliance", 2.0, match_fields=["content_preview"]),
-            BudgetRule("draft", 0.5, match_fields=["filename"]),
+            BudgetRule("legal", 1.05, match_fields=["filename", "title", "content_preview"]),
+            BudgetRule("compliance", 1.1, match_fields=["content_preview"]),
+            BudgetRule("draft", 0.95, match_fields=["filename"]),
         ]
-        config = TokenBudgetConfig(base_budget=2000, rules=rules)
+        config = TokenBudgetConfig(base_budget=800, rules=rules)
 
-        # Only "legal" matches in filename: 2000 * 3.0 = 6000
-        assert config.evaluate("legal_document.pdf") == 6000
+        # Only "legal" matches in filename: 800 * 1.05 = 840
+        assert config.evaluate("legal_document.pdf") == 840
 
-        # "legal" in title and "compliance" in preview: 2000 * 3.0 * 2.0 = 12000
+        # "legal" in title and "compliance" in preview: 800 * 1.05 * 1.1 = 924
         assert config.evaluate(
             "contract.pdf",
             title="Legal Agreement",
             content_preview="This compliance document...",
-        ) == 12000
+        ) == 924
 
-        # "legal" and "draft": 2000 * 3.0 * 0.5 = 3000
-        assert config.evaluate("legal_draft.pdf") == 3000
+        # "legal" and "draft": 800 * 1.05 * 0.95 = 798
+        assert config.evaluate("legal_draft.pdf") == 798
 
     def test_empty_fields_ignored(self):
         """Test that empty/None fields don't cause errors."""
-        rule = BudgetRule("financial", 2.0, match_fields=["title", "content_preview"])
-        config = TokenBudgetConfig(base_budget=2000, rules=[rule])
+        rule = BudgetRule("financial", 1.1, match_fields=["title", "content_preview"])
+        config = TokenBudgetConfig(base_budget=800, rules=[rule])
 
         # None values should be treated as empty strings
-        assert config.evaluate("report.pdf", title=None, content_preview=None) == 2000
-        assert config.evaluate("report.pdf", title="Financial Report") == 4000
+        assert config.evaluate("report.pdf", title=None, content_preview=None) == 800
+        assert config.evaluate("report.pdf", title="Financial Report") == 880
