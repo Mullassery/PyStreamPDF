@@ -12,7 +12,7 @@ PyStreamPDF is a production-ready PDF processing library for AI applications. It
 - **Semantic Chunking**: Context-aware document splitting with configurable token targets
 - **Intelligent Caching**: L1 memory + L2 disk caching with cache invalidation
 - **Multi-Format Extraction**: Text, tables, images, OCR (Tesseract, PaddleOCR)
-- **MCP 2.0 Integration**: 12 discoverable tools for Claude via MCP protocol
+- **MCP 2.0 Integration**: 12 discoverable tools via MCP protocol
 - **Production-Ready**: 523 tests, comprehensive error handling, type-safe API
 - **Zero Configuration**: Works out-of-the-box with sensible defaults
 
@@ -98,11 +98,11 @@ Use keyword-based rules to scale within the 500-1000 range without changing hard
 
 Enable MCP tools on port **8780** (see MCP_QUICKSTART.md for details).
 
-Claude discovers all 207 tools across 18 projects:
+AI systems discover all 207 tools across 18 projects:
 - 12 PyStreamPDF tools for document processing
 - 195 tools from 17 integrated projects
 - Multi-project workflows with intelligent orchestration
-- 60-75% token reduction through query optimization
+- 60-75% reduction in context usage through query optimization
 
 ## Documentation
 
@@ -115,7 +115,7 @@ Claude discovers all 207 tools across 18 projects:
 
 18 projects, 207 tools, 18 simultaneous MCP endpoints (8765-8782).
 
-**All tools discoverable by Claude in single connection.**
+**All tools discoverable via MCP protocol in a single connection.**
 
 ## Version History
 
