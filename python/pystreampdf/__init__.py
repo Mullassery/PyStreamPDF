@@ -4,7 +4,7 @@ Intelligent PDF parsing, retrieval, and context extraction for AI agents.
 Reduces token usage by 10-50x while maintaining accuracy.
 """
 
-__version__ = "2.1.0"  # Token Budget Multipliers + Smart Context Allocation
+__version__ = "2.1.1"  # Token Budget Multipliers + Smart Context Allocation
 
 # Optional: Rust core bindings (requires maturin build)
 try:
@@ -32,6 +32,34 @@ from .extraction import (
 # Caching and token budget configuration
 from .token_budget import TokenBudgetConfig, BudgetRule
 from .cache import PDFCache, CachedDocument
+
+# Dashboard and CLI utilities
+try:
+    from .cli_dashboard import (
+        DashboardMetrics,
+        SimpleDashboard,
+        RichDashboard,
+        TextualDashboard,
+        PyStreamPDFDashboard,
+    )
+except ImportError:
+    DashboardMetrics = None
+    SimpleDashboard = None
+    RichDashboard = None
+    TextualDashboard = None
+    PyStreamPDFDashboard = None
+
+# Excel export utilities
+try:
+    from .excel_export import (
+        ExtractedTable,
+        ExcelExporter,
+        PDFToExcelPipeline,
+    )
+except ImportError:
+    ExtractedTable = None
+    ExcelExporter = None
+    PDFToExcelPipeline = None
 
 # OCR module (optional)
 try:
@@ -154,6 +182,10 @@ __all__ = [
     "BudgetRule",
     "PDFCache",
     "CachedDocument",
+    # Dashboard and CLI (optional)
+    *((["DashboardMetrics", "SimpleDashboard", "RichDashboard", "TextualDashboard", "PyStreamPDFDashboard"]) if DashboardMetrics is not None else []),
+    # Excel export (optional)
+    *((["ExtractedTable", "ExcelExporter", "PDFToExcelPipeline"]) if ExtractedTable is not None else []),
     # OCR (optional)
     *((["OcrManager", "OcrProvider", "OcrResult", "OcrPipeline", "ProcessedPage", "TextRegion", "OcrCapabilities", "TesseractProvider", "PaddleProvider"]) if OcrManager is not None else []),
     # Validation (optional)

@@ -1,0 +1,21 @@
+[mcp]
+enabled = true
+port = 8780
+discovery_method = "stdio"
+
+[mcp.tools]
+extract_text = true
+extract_tables = true
+extract_images = true
+apply_ocr = true
+detect_document_structure = true
+extract_metadata = true
+detect_forms = true
+chunk_document = true
+extract_citations = true
+detect_language = true
+validate_pdf = true
+export_processed_document = true
+
+[mcp.security]
+require_auth = false
