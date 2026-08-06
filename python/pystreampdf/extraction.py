@@ -144,7 +144,7 @@ class ReadingOrderCorrector:
         sorted_y = sorted(fragment_y_order)
         deviation = sum(abs(fragment_y_order[i] - sorted_y[i]) for i in range(len(fragment_y_order)))
 
-        if deviation > 100:
+        if deviation > 50:
             return ReadingOrder.NEEDS_FIXING
 
         return ReadingOrder.CORRECT
