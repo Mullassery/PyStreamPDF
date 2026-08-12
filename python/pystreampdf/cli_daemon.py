@@ -1,30 +1,38 @@
 """Dashboard daemon - runs in background, restarts on close"""
 
+import shlex
 import subprocess
 import time
 import signal
 import sys
 from pathlib import Path
+from typing import List, Union
 
 class DashboardDaemon:
-    def __init__(self, package_name: str, dashboard_cmd: str):
+    def __init__(self, package_name: str, dashboard_cmd: Union[str, List[str]]):
         self.package_name = package_name
-        self.dashboard_cmd = dashboard_cmd
+        # Accept either a shell-style string (split with shlex, never executed
+        # via a shell) or an already-tokenized argv list. This avoids
+        # subprocess(..., shell=True), which is an injection risk if the
+        # command string is ever built from untrusted input.
+        self.dashboard_cmd: List[str] = (
+            shlex.split(dashboard_cmd) if isinstance(dashboard_cmd, str) else list(dashboard_cmd)
+        )
         self.process = None
         self.running = True
-        
+
     def start(self):
         """Start dashboard daemon - restarts if closed"""
         signal.signal(signal.SIGINT, self._handle_interrupt)
-        
+
         while self.running:
             try:
                 print(f"\n📊 Starting {self.package_name} dashboard daemon...")
                 print(f"   (Press Ctrl+C to close, use keyboard shortcuts to restore)\n")
-                
+
                 self.process = subprocess.Popen(
                     self.dashboard_cmd,
-                    shell=True,
+                    shell=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
                 )

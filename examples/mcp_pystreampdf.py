@@ -1,13 +1,19 @@
-"""Example: PyStreamPDF MCP 2.0 Integration"""
+"""Example: PyStreamPDF MCP 2.0 Integration
+
+By default the connector binds to 127.0.0.1 with no cross-origin access and
+read-only permissions. Pass allow_remote=True (and review the security
+implications first — this connector has no authentication of its own)
+if you genuinely need to expose it beyond localhost.
+"""
 
 import asyncio
-from pystreampdf import PerceptionEngine  # Adjust import based on project
+from pystreampdf._mcp_connector import PDFProcessor
 
 async def main():
     # Initialize with MCP 2.0 support
-    engine = PerceptionEngine()
-    
-    # Start MCP connector
+    engine = PDFProcessor()
+
+    # Start MCP connector (loopback-only by default; see docstring above)
     mcp_url = engine.start_mcp_connector()
     print(f"✓ PyStreamPDF MCP 2.0 running at {mcp_url}")
     

@@ -14,29 +14,71 @@ pub struct ParsedDocument {
     pub structure: DocumentStructure,
 }
 
-pub fn parse_document_open(path: &str) -> Result<ParsedDocument> {
-    // Try to parse with PDFium, but fall back if it's not available
-    // This allows tests to work even if PDFium binary is not installed
-    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-        try_parse_with_pdfium(path)
-    }));
+/// Bind to the PDFium native library, converting a missing/corrupt binary into a
+/// proper `Error` instead of letting the process panic. `Pdfium::default()` panics
+/// internally (via `.unwrap()`) when no PDFium library can be located, so we catch
+/// that panic here and surface it as an honest error to the caller.
+pub(crate) fn init_pdfium() -> Result<Pdfium> {
+    panic::catch_unwind(Pdfium::default).map_err(|_| {
+        Error::Pdf(
+            "PDFium native library could not be loaded. Install libpdfium (see \
+             scripts/download_pdfium.sh) and ensure it is discoverable (current working \
+             directory or system library path)."
+                .to_string(),
+        )
+    })
+}
 
-    match result {
-        Ok(Ok(doc)) => Ok(doc),
-        Ok(Err(_)) => create_fallback_document(path),
-        Err(_) => create_fallback_document(path),
+/// Map a `PdfiumError` returned while opening a document into our own `Error` type.
+/// Wrong/missing password is surfaced distinctly (`Error::EncryptedPdf`) so callers can
+/// tell "this file needs a password" apart from "this file is broken".
+pub(crate) fn map_pdfium_open_error(path: &str, err: PdfiumError) -> Error {
+    match err {
+        PdfiumError::PdfiumLibraryInternalError(PdfiumInternalError::PasswordError) => {
+            Error::EncryptedPdf(format!(
+                "'{}' is password-protected and no valid password was supplied.",
+                path
+            ))
+        }
+        other => Error::Pdf(format!("Failed to load PDF '{}': {:?}", path, other)),
     }
 }
 
-fn try_parse_with_pdfium(path: &str) -> Result<ParsedDocument> {
-    // This will panic if PDFium is not available, which we catch in parse_document_open
-    let pdfium = Pdfium::default(); // OK to panic here, caller handles via fallback
+/// Parse a PDF document from disk. On any real failure (corrupt file, missing PDFium
+/// library, wrong password, etc.) this returns a proper `Error` — it never fabricates
+/// placeholder content.
+pub fn parse_document_open(path: &str) -> Result<ParsedDocument> {
+    parse_document_open_with_password(path, None)
+}
+
+/// Parse a PDF document from disk, optionally supplying a password for encrypted
+/// documents. Fails closed: a missing/incorrect password for an encrypted document
+/// returns `Error::EncryptedPdf` rather than silently succeeding or fabricating content.
+pub fn parse_document_open_with_password(path: &str, password: Option<&str>) -> Result<ParsedDocument> {
+    let path_owned = path.to_string();
+    let password_owned = password.map(|p| p.to_string());
+
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        try_parse_with_pdfium(&path_owned, password_owned.as_deref())
+    }));
+
+    match result {
+        Ok(inner) => inner,
+        Err(_) => Err(Error::Pdf(format!(
+            "PDFium panicked while parsing '{}'. The file is likely corrupted, truncated, or not a valid PDF.",
+            path
+        ))),
+    }
+}
+
+fn try_parse_with_pdfium(path: &str, password: Option<&str>) -> Result<ParsedDocument> {
+    let pdfium = init_pdfium()?;
 
     // Load and process document in its own scope
     let (page_count, pages, headings) = {
         let document = pdfium
-            .load_pdf_from_file(path, None)
-            .map_err(|e| Error::Pdf(format!("Failed to load PDF: {:?}", e)))?;
+            .load_pdf_from_file(path, password)
+            .map_err(|e| map_pdfium_open_error(path, e))?;
 
         let page_count = document.pages().len() as u32;
         let mut pages = Vec::with_capacity(page_count as usize);
@@ -113,67 +155,29 @@ fn try_parse_with_pdfium(path: &str) -> Result<ParsedDocument> {
     })
 }
 
-fn create_fallback_document(path: &str) -> Result<ParsedDocument> {
-    // For testing: create a fallback document when PDFium is unavailable
-    // Heuristic: estimate page count from file size (rough: ~50KB per page average)
-    use std::fs;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let file_size = fs::metadata(path)
-        .map(|m| m.len())
-        .unwrap_or(250_000);
-
-    // Estimate: 50KB per page on average for complex PDFs, 10KB for simple ones
-    // For our test PDFs: simple=~50KB (5 pages), multi=~250KB (5 pages), large=~500KB (100 pages)
-    let estimated_pages = if file_size < 300_000 {
-        5 // small/medium PDF
-    } else {
-        100 // large PDF
-    };
-
-    let mut pages = Vec::new();
-    for i in 1..=estimated_pages {
-        let text_content = format!("Page {} content goes here. This is sample text for testing the PDF parsing functionality.", i);
-        pages.push(PageMetadata {
-            page_number: i,
-            width: 612.0,
-            height: 792.0,
-            rotation: 0,
-            label: None,
-            word_count: 100,
-            text_preview: text_content.chars().take(300).collect(),
-            text: text_content,
-            regions: Vec::new(),
-            is_likely_scanned: false,
-        });
+    #[test]
+    fn test_parse_nonexistent_file_returns_error() {
+        let result = parse_document_open("/nonexistent/path/does-not-exist.pdf");
+        assert!(result.is_err(), "parsing a nonexistent file must return an Error, not fabricated content");
     }
 
-    let mut headings = Vec::new();
-    for i in 1..=estimated_pages {
-        let heading_text = format!("Page {} Header", i);
-        let level = detect_heading_level(&heading_text).unwrap_or(1);
-        headings.push(HeadingNode {
-            level,
-            text: heading_text,
-            page_number: i,
-            children: Vec::new(),
-        });
-    }
+    #[test]
+    fn test_parse_garbage_file_returns_error_not_fake_content() {
+        // A file that exists but is not a valid PDF at all.
+        let dir = std::env::temp_dir();
+        let path = dir.join("pystreampdf_test_garbage_not_a_pdf.pdf");
+        std::fs::write(&path, b"this is not a pdf file, just plain text garbage").unwrap();
 
-    Ok(ParsedDocument {
-        page_count: estimated_pages,
-        metadata: DocumentMetadata {
-            title: Some("Test Document".to_string()),
-            author: None,
-            creator: None,
-            producer: None,
-            created: None,
-            modified: None,
-            page_count: estimated_pages,
-        },
-        pages,
-        structure: DocumentStructure {
-            toc: Vec::new(),
-            headings,
-        },
-    })
+        let result = parse_document_open(path.to_str().unwrap());
+        let _ = std::fs::remove_file(&path);
+
+        assert!(
+            result.is_err(),
+            "parsing an invalid PDF must return an Error rather than a fabricated fallback document"
+        );
+    }
 }

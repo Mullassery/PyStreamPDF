@@ -8,7 +8,11 @@ are recognized regardless of filename or location.
 """
 
 import hashlib
+import hmac
+import os
 import pickle
+import secrets
+import stat
 import time
 from typing import Callable, List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass, field
@@ -56,6 +60,8 @@ class PDFCache:
 
     CACHE_VERSION = 1
     CACHE_DIR_DEFAULT = ".cache/pystreampdf"
+    HMAC_KEY_FILENAME = ".cache_hmac_key"
+    HMAC_DIGEST_SIZE = 32  # SHA-256 digest size in bytes
 
     def __init__(
         self,
@@ -86,9 +92,48 @@ class PDFCache:
             disk_cache_dir = str(Path.home() / self.CACHE_DIR_DEFAULT)
         self.disk_cache_dir = Path(disk_cache_dir)
         self.disk_cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(self.disk_cache_dir, stat.S_IRWXU)  # 0700: owner-only
+        except OSError:
+            pass
+
+        self._hmac_key = self._load_or_create_hmac_key()
 
         self.hits = 0
         self.misses = 0
+
+    def _load_or_create_hmac_key(self) -> bytes:
+        """Load the cache-signing key, generating and persisting a new one on
+        first use. The key is stored with owner-only (0600) permissions and is
+        used to HMAC-sign every L2 (disk) cache entry, so that `pickle.load()`
+        is only ever called on bytes we can prove we wrote ourselves — this
+        closes the local-deserialization RCE vector where another process or
+        user could otherwise plant a malicious pickle in the cache directory.
+        """
+        key_path = self.disk_cache_dir / self.HMAC_KEY_FILENAME
+
+        if key_path.exists():
+            try:
+                key = key_path.read_bytes()
+                if len(key) == 32:
+                    return key
+            except OSError:
+                pass
+
+        key = secrets.token_bytes(32)
+        try:
+            fd = os.open(str(key_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                os.write(fd, key)
+            finally:
+                os.close(fd)
+        except OSError:
+            # If we can't persist the key (e.g. read-only cache dir), fall
+            # back to an in-memory-only key. L2 entries signed with it simply
+            # won't verify across process restarts and will be treated as
+            # cache misses, which is safe (just less effective caching).
+            pass
+        return key
 
     def get_or_process(
         self,
@@ -215,18 +260,38 @@ class PDFCache:
         return None
 
     def _get_from_l2(self, file_hash: str) -> Optional[CachedDocument]:
-        """Get document from L2 (disk) cache."""
+        """Get document from L2 (disk) cache.
+
+        The on-disk payload is HMAC-SHA256 signed (see `_add_to_l2`). The
+        signature is verified with a constant-time comparison *before*
+        `pickle.load()` ever runs on the bytes; a missing or invalid
+        signature (e.g. the file was tampered with, corrupted, or planted by
+        another process) is treated as a cache miss and the file is removed,
+        rather than being deserialized.
+        """
         l2_path = self.disk_cache_dir / f"{file_hash}.pkl"
         if not l2_path.exists():
             return None
 
         try:
-            with open(l2_path, "rb") as f:
-                data = pickle.load(f)
-                if isinstance(data, dict) and data.get("version") == self.CACHE_VERSION:
-                    return data.get("document")
+            raw = l2_path.read_bytes()
+            if len(raw) <= self.HMAC_DIGEST_SIZE:
+                raise ValueError("cache entry too short to contain a signature")
+
+            signature, payload = raw[: self.HMAC_DIGEST_SIZE], raw[self.HMAC_DIGEST_SIZE :]
+            expected = hmac.new(self._hmac_key, payload, hashlib.sha256).digest()
+
+            if not hmac.compare_digest(signature, expected):
+                raise ValueError("cache entry signature verification failed")
+
+            data = pickle.loads(payload)
+            if isinstance(data, dict) and data.get("version") == self.CACHE_VERSION:
+                return data.get("document")
         except Exception:
-            l2_path.unlink()
+            try:
+                l2_path.unlink()
+            except OSError:
+                pass
         return None
 
     def _add_to_l1(self, file_hash: str, doc: CachedDocument) -> None:
@@ -244,11 +309,19 @@ class PDFCache:
             self.l1_size_bytes -= evicted_doc.memory_size_bytes()
 
     def _add_to_l2(self, file_hash: str, doc: CachedDocument) -> None:
-        """Add document to L2 (disk) cache."""
+        """Add document to L2 (disk) cache, signed with HMAC-SHA256 so that a
+        tampered or foreign file can never be deserialized on read (see
+        `_get_from_l2`)."""
         l2_path = self.disk_cache_dir / f"{file_hash}.pkl"
         try:
-            with open(l2_path, "wb") as f:
-                pickle.dump({"version": self.CACHE_VERSION, "document": doc}, f)
+            payload = pickle.dumps({"version": self.CACHE_VERSION, "document": doc})
+            signature = hmac.new(self._hmac_key, payload, hashlib.sha256).digest()
+
+            fd = os.open(str(l2_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                os.write(fd, signature + payload)
+            finally:
+                os.close(fd)
         except Exception:
             pass
 
