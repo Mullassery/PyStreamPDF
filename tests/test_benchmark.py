@@ -4,10 +4,14 @@ import pystreampdf
 
 
 def test_parse_large_pdf_performance(large_pdf):
-    """Test that parsing a large PDF completes in reasonable time
+    """Test that parsing a ~100-page PDF completes in reasonable time.
 
-    Phase 1b success criterion: parse document quickly
-    Final goal: parse 1000-page PDF in <500ms
+    This is a smoke test against the `large_pdf` fixture (100 pages,
+    reportlab-generated), not a benchmark of the "parse a 1000-page PDF in
+    <500ms" target — we don't have a 1000-page fixture in this suite, and the
+    assertion below (<10s) is deliberately generous for CI stability rather
+    than a tight performance SLA. If/when a real 1000-page fixture is added,
+    this should be tightened to actually assert the <500ms goal.
     """
     doc = pystreampdf.open(large_pdf)
 
@@ -18,7 +22,7 @@ def test_parse_large_pdf_performance(large_pdf):
     assert isinstance(pages, list)
     # Test fixture generates either 5 or 100 pages depending on file size
     assert len(pages) >= 5, f"Expected at least 5 pages, got {len(pages)}"
-    # Should complete quickly (final goal is <500ms for 1000 pages)
+    # Generous CI-stability bound, not a performance target (see docstring).
     assert elapsed_ms < 10000, f"Parsing took {elapsed_ms}ms, expected <10000ms"
 
 

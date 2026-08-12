@@ -4,7 +4,7 @@ Intelligent PDF parsing, retrieval, and context extraction for AI agents.
 Reduces token usage by 10-50x while maintaining accuracy.
 """
 
-__version__ = "2.1.1"  # Token Budget Multipliers + Smart Context Allocation
+__version__ = "2.2.0"  # Real encryption/permission detection, honest parse-failure signaling, security hardening
 
 # Optional: Rust core bindings (requires maturin build)
 try:

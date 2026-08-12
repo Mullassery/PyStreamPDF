@@ -13,6 +13,8 @@ from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .tokenizer import count_tokens
+
 
 class ElementType(str, Enum):
     """Type of PDF element."""
@@ -319,7 +321,9 @@ class SemanticChunker:
         """
         self.target_chunk_size = target_chunk_size
         self.target_tokens = target_tokens
-        self.token_ratio = 1.0 / 4.0  # Approximate tokens per character
+        # Real BPE token counts (tiktoken) when available, else a labeled
+        # len/4 heuristic fallback — see pystreampdf.tokenizer.count_tokens.
+        self.token_ratio = 1.0 / 4.0  # Deprecated: kept only for backward compatibility
 
     def chunk_content(
         self,
@@ -348,7 +352,7 @@ class SemanticChunker:
 
         if element_type == ElementType.TABLE:
             # Tables stay as single chunks
-            estimated_tokens = int(len(content) * self.token_ratio)
+            estimated_tokens = count_tokens(content)
             chunks.append(ContentChunk(
                 content=content,
                 chunk_type=element_type,
@@ -364,7 +368,7 @@ class SemanticChunker:
             current_tokens = 0
 
             for para in paragraphs:
-                para_tokens = int(len(para) * self.token_ratio)
+                para_tokens = count_tokens(para)
 
                 # New chunk if adding this paragraph exceeds target
                 if current_tokens + para_tokens > target_tokens and current_chunk_text:

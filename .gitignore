@@ -3,6 +3,10 @@
 Cargo.lock
 **/*.rs.bk
 
+# PDFium native library (fetched locally for building/testing; not vendored)
+*.dylib
+/libpdfium*
+
 # Python
 __pycache__/
 *.py[cod]

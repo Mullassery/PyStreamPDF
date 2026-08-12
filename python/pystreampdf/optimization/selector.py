@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 from ..structure.builder import NodeType
+from ..tokenizer import HEURISTIC_CHARS_PER_TOKEN
 
 
 class ContentDetail(Enum):
@@ -117,8 +118,12 @@ class ContentSelector:
 
         compression_ratio = compression_ratios[detail]
 
-        # Rough token estimate (1 token ≈ 4 chars)
-        estimated_tokens = int(content_length / 4 * compression_ratio)
+        # This method only receives a projected content_length (int), not
+        # actual text, so a real tokenizer can't be run here — there's
+        # nothing to tokenize yet. This stays a heuristic estimate
+        # (len/4-equivalent) by necessity; see pystreampdf.tokenizer for the
+        # real-tokenizer path used everywhere actual text is available.
+        estimated_tokens = int(content_length / HEURISTIC_CHARS_PER_TOKEN * compression_ratio)
 
         # Priority: high confidence + high detail + important type
         type_priorities = {

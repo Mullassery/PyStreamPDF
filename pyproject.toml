@@ -26,7 +26,19 @@ classifiers = [
     "Topic :: Text Processing",
 ]
 requires-python = ">=3.9"
-dependencies = ["rich>=13.0"]
+dependencies = ["rich>=13.0", "pyyaml>=6.0"]
+
+[project.optional-dependencies]
+# Real BPE tokenization for accurate token-count estimates. Falls back to the
+# len(text)/4 heuristic (clearly labeled as approximate) when not installed.
+tiktoken = ["tiktoken>=0.5"]
+dev = [
+    "maturin>=1.0,<2.0",
+    "pytest>=7.0",
+    "pytest-timeout>=2.1",
+    "reportlab>=4.0",
+    "tiktoken>=0.5",
+]
 
 [project.scripts]
 pystreampdf = "pystreampdf.cli:main"

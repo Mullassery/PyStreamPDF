@@ -11,6 +11,8 @@ from typing import List, Optional, Dict, Tuple, Set, Any
 from enum import Enum
 from dataclasses import dataclass, field
 
+from ..tokenizer import count_tokens, HEURISTIC_CHARS_PER_TOKEN
+
 
 class AssemblyStrategy(str, Enum):
     """Strategy for assembling context."""
@@ -54,8 +56,12 @@ class ContextAssembler:
         self.chunks = chunks or []
         self.token_budget_config = token_budget_config
 
-        # Token estimation
-        self.avg_tokens_per_char = 1 / 4.0  # Approximate: 4 chars per token
+        # Token estimation: real tiktoken counts when available, else a
+        # labeled len/4 heuristic (see pystreampdf.tokenizer). This ratio is
+        # kept only for the rare case where we need to convert a token
+        # *budget* into an approximate character-slice length before any
+        # text exists to tokenize (see _assemble_survey below).
+        self.avg_tokens_per_char = 1 / HEURISTIC_CHARS_PER_TOKEN
 
     def assemble(
         self,
@@ -125,7 +131,7 @@ class ContextAssembler:
             for concept, _, confidence in concepts:
                 for source_text, source_id in self.chunks:
                     if concept.lower() in source_text.lower():
-                        tokens = int(len(source_text) * self.avg_tokens_per_char)
+                        tokens = count_tokens(source_text)
                         if total_tokens + tokens <= max_tokens:
                             sections.append(f"**{concept}**: {source_text[:200]}...")
                             total_tokens += tokens
@@ -146,7 +152,7 @@ class ContextAssembler:
         remaining_tokens = max_tokens - total_tokens
         for source_text, source_id in self.chunks:
             if source_id not in sources:
-                tokens = int(len(source_text) * self.avg_tokens_per_char)
+                tokens = count_tokens(source_text)
                 if tokens <= remaining_tokens:
                     sections.append(source_text)
                     total_tokens += tokens
@@ -189,7 +195,7 @@ class ContextAssembler:
             has_tech = any(keyword in source_text.lower() for keyword in tech_keywords)
 
             if has_tech and source_id not in sources:
-                tokens = int(len(source_text) * self.avg_tokens_per_char)
+                tokens = count_tokens(source_text)
                 if total_tokens + tokens <= max_tokens:
                     sections.append(source_text)
                     total_tokens += tokens
@@ -199,7 +205,7 @@ class ContextAssembler:
         remaining_tokens = max_tokens - total_tokens
         for source_text, source_id in self.chunks:
             if source_id not in sources:
-                tokens = int(len(source_text) * self.avg_tokens_per_char)
+                tokens = count_tokens(source_text)
                 if tokens <= remaining_tokens:
                     sections.append(source_text)
                     total_tokens += tokens
@@ -238,7 +244,7 @@ class ContextAssembler:
         for i, (source_text, source_id) in enumerate(self.chunks):
             # Take first chunk_size characters from each
             text_slice = source_text[:int(chunk_size / self.avg_tokens_per_char)]
-            tokens = int(len(text_slice) * self.avg_tokens_per_char)
+            tokens = count_tokens(text_slice)
 
             if total_tokens + tokens <= max_tokens:
                 sections.append(text_slice)
@@ -277,7 +283,7 @@ class ContextAssembler:
 
         # Add from simple to complex
         for source_text, source_id in sorted_chunks:
-            tokens = int(len(source_text) * self.avg_tokens_per_char)
+            tokens = count_tokens(source_text)
             if total_tokens + tokens <= max_tokens:
                 sections.append(source_text)
                 total_tokens += tokens

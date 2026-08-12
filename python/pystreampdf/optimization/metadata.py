@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 from enum import Enum
 
+from ..tokenizer import count_tokens
+
 
 class ChunkDensity(Enum):
     """Information density of chunk."""
@@ -174,7 +176,7 @@ class MetadataInjector:
         """
         density = MetadataInjector.estimate_density(content)
         length = len(content)
-        estimated_tokens = int(length / 4)  # Rough estimate: 1 token ≈ 4 chars
+        estimated_tokens = count_tokens(content)  # Exact via tiktoken if installed, else len/4 heuristic
 
         # Map node_type to content_type if not provided
         content_type = kwargs.get("content_type", source_analyzer or node_type)

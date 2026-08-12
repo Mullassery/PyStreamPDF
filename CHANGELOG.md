@@ -4,6 +4,81 @@ All notable changes to StreamPDF are documented here.
 
 ---
 
+## [2.2.0] - 2026-08-12 - Real Security Behavior, Honest Failure Signaling
+
+This release fixes security-behavior bugs from earlier versions where the
+security module's public API existed but was backed by stubs. Callers'
+security assumptions materially change with this release, hence the minor
+version bump rather than a patch.
+
+### Fixed (security / correctness)
+
+- **`check_encryption()` / `PdfDocument::is_encrypted()`**: previously always
+  returned `NotEncrypted` regardless of the actual file. Now uses PDFium's
+  real document open + security-handler-revision APIs to detect encryption,
+  including PDFs that are encrypted but openable with an empty user password
+  (owner-password-only / permission-only protection).
+- **`extract_permissions()` / `PdfDocument::permissions()`**: previously
+  always returned a hardcoded, mostly-permissive default. Now reads PDFium's
+  real permission bitflags (`FPDF_GetDocPermissions`) via the document's
+  security handler revision.
+- **`open_with_password()` / `PdfDocument::open_with_password()`**:
+  previously ignored the supplied password entirely and parsed the document
+  unauthenticated. Now passes the password through to PDFium and **fails
+  closed** (`Error::EncryptedPdf`) on a missing or incorrect password.
+- **Silent content fabrication removed**: `pdf_parser.rs` no longer falls
+  back to a fabricated placeholder document ("Page N content goes here...")
+  with a guessed page count when PDFium fails to parse a file. Parse
+  failures (corrupt/truncated/malformed files, wrong password, missing
+  PDFium library) now return a real `Error`, never fake-but-plausible data.
+- **Cache deserialization hardening**: the L2 disk cache no longer calls
+  `pickle.load()` on unverified bytes. Every cache entry is now HMAC-SHA256
+  signed with a key generated on first use and stored with owner-only (0600)
+  permissions; the signature is verified with a constant-time comparison
+  before any unpickling, and a missing/invalid signature is treated as a
+  cache miss (and the file is deleted) rather than deserialized.
+- **MCP/DAB connector hardened**: default bind host changed from `0.0.0.0`
+  to `127.0.0.1`, CORS defaults to no cross-origin access instead of `*`,
+  and default permissions are scoped to a read-only "local" role instead of
+  wildcard `actions: ["*"], roles: ["*"]`. Wider exposure now requires an
+  explicit `allow_remote=True` opt-in.
+- **Removed `shell=True` subprocess pattern** in `cli_daemon.py` in favor of
+  an argv list (no shell involved).
+- **Fixed CI Python test wiring**: the pytest step checked for tests at
+  `python/tests/` (which doesn't exist) instead of the real suite at
+  repo-root `tests/`, so CI was silently running zero Python tests. CI now
+  builds the native extension via `maturin develop` and runs the real suite.
+- **Fixed missing `pyyaml` dependency**: `token_budget.py` imports `yaml`
+  unconditionally at package-import time, but `pyyaml` was never declared as
+  a dependency in `pyproject.toml` -- a clean `pip install pystreampdf`
+  could fail to import. Added `pyyaml>=6.0` to `dependencies`.
+- **Resolved duplicate/shadowing `pystreampdf` package**: a stray
+  repo-root `pystreampdf/` directory (containing only the MCP connector
+  modules, no `__init__.py`) shadowed the real, packaged `python/pystreampdf/`
+  source directory. Moved those modules into the real package and removed
+  the root-level duplicate.
+- **Real tokenization**: added `pystreampdf.tokenizer`, which uses
+  `tiktoken` (optional dependency) for exact BPE token counts when
+  installed, falling back to the previous `len(text) / 4` heuristic
+  (explicitly labeled as approximate) otherwise. Wired into
+  `extraction.py`, `optimization/metadata.py`, and `semantic/assembler.py`.
+
+### Added
+
+- Real adversarial PDF test fixtures: genuinely password-protected PDFs
+  (correct/incorrect password), permission-restricted PDFs, malformed PDFs,
+  truncated PDFs, and a deeply-nested-object PDF, exercising the real
+  `security.rs` implementation end-to-end.
+
+### Hygiene
+
+- Removed stray `.bak` files (`README.md.bak`,
+  `python/pystreampdf/intelligence/__init__.py.bak`).
+- Synced `Cargo.toml` / `python/pystreampdf/__init__.py` version strings
+  (previously drifted: 2.1.2 vs 2.1.1).
+
+---
+
 ## [1.5.0] - 2026-07-15 - Enterprise Features
 
 ### Added
