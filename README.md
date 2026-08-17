@@ -1,8 +1,11 @@
 # PyStreamPDF
 
-**Reduce RAG costs 50-70%. Extract only what matters from PDFs.**
+**Extract only what matters from PDFs, so you send less to LLMs.**
 
-Stop sending entire documents to LLMs. PyStreamPDF analyzes structure, identifies relevant sections, and extracts only critical content. Cut token costs 50-70% while improving retrieval accuracy.
+Stop sending entire documents to LLMs. PyStreamPDF parses PDF structure and
+splits content into semantic, token-budget-aware chunks so you can send
+only the relevant parts of a document to a model. See "Token Savings"
+below for how much that saves in practice — it depends on your documents.
 
 [![PyPI](https://img.shields.io/pypi/v/pystreampdf)](https://pypi.org/project/pystreampdf)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org)
@@ -14,20 +17,23 @@ Stop sending entire documents to LLMs. PyStreamPDF analyzes structure, identifie
 ## 30-Second Start
 
 ```python
-from pystreampdf import Document
+from pystreampdf import SemanticChunker, ElementType
 
-# Extract only relevant content from PDF
-doc = Document("financial_report.pdf")
+with open("financial_report.pdf", "rb") as f:
+    text = f.read().decode("latin-1", errors="ignore")  # or use a real PDF text extractor first
 
-# Smart content extraction
-relevant = doc.extract_relevant("revenue for Q3 2024")
-print(f"Extracted {len(relevant)} chunks")
-print(f"Token savings: {relevant.token_savings:.0%}")  # 60% savings
-
-# Send only relevant parts to LLM
-for chunk in relevant:
-    response = llm.query(chunk, "What was Q3 revenue?")
+chunker = SemanticChunker(target_tokens=500)
+chunks = chunker.chunk_content(
+    text, element_type=ElementType.TEXT, page_start=1, page_end=1
+)
+print(f"Split into {len(chunks)} semantic chunks")
 ```
+
+There is no `Document`/`.extract_relevant()` class in this package —
+`SemanticChunker` (shown above) and `PDFCache` (see "Quick Start: Document
+Extraction" below) are the real, exported API. If you built against a
+`Document` class from an earlier version of these docs, it never actually
+existed in source; see Known Issues.
 
 ---
 
@@ -40,10 +46,10 @@ for chunk in relevant:
 - No way to know which parts actually matter
 
 **The Solution:**
-- Intelligent document analysis finds relevant sections
-- Semantic chunking with context awareness
-- 50-70% reduction in token usage
-- Better retrieval accuracy (less noise)
+- Semantic chunking with context awareness (real, in `SemanticChunker`)
+- Token-budget-aware caching (real, in `PDFCache` / `TokenBudgetConfig`)
+- Reduces the volume of text you send per query — see "Token Savings"
+  below for what's measured vs. illustrative
 
 ---
 
@@ -63,45 +69,17 @@ for chunk in relevant:
 
 ## Real-World Use Cases
 
-**Financial Documents:**
-```python
-# Extract relevant sections from annual report
-doc = Document("10-K_2024.pdf")
-revenue_sections = doc.extract_relevant("revenue")
-earnings_sections = doc.extract_relevant("earnings")
-
-# 70% fewer tokens than sending whole PDF
-for section in revenue_sections:
-    summary = llm.query(section, "What was total revenue?")
-```
-
-**Legal Contracts:**
-```python
-# Find clauses without reading everything
-doc = Document("contract.pdf")
-liability = doc.extract_relevant("liability", "indemnification")
-print(f"Found in {len(liability)} sections")
-```
-
-**Research Papers:**
-```python
-# Extract methodology and results
-doc = Document("paper.pdf")
-methods = doc.extract_relevant("methods", "experiment")
-results = doc.extract_relevant("results", "findings")
-```
+See [examples/basic_parse.py](examples/basic_parse.py) for the Rust-backed
+`pystreampdf.open()` path (document/page/structure inspection — requires
+the compiled `_core` extension, see Known Issues) and
+[examples/token_budget_and_cache_example.py](examples/token_budget_and_cache_example.py)
+for the pure-Python `SemanticChunker` + `PDFCache` + `TokenBudgetConfig`
+path shown above. Both are real, runnable scripts — copying them is more
+reliable than a README snippet for an evolving API.
 
 ---
 
 ## Token Savings
-
-| Document | Size | Full PDF Tokens | PyStreamPDF | Savings |
-|----------|------|-----------------|-------------|---------|
-| Annual Report | 200 pages | 50K | 15K | 70% |
-| Contract | 50 pages | 12K | 4K | 67% |
-| Research Paper | 30 pages | 8K | 2K | 75% |
-
-**Results:** Lower costs + better retrieval accuracy + faster responses
 
 **A note on how token counts are computed:** by default, token counts use a
 `len(text) / 4` heuristic (a common rule of thumb, but approximate — it can
@@ -115,9 +93,15 @@ pip install "pystreampdf[tiktoken]"
 When `tiktoken` is installed, `pystreampdf.tokenizer.is_exact()` returns
 `True` and counts use the real `cl100k_base` encoding; otherwise it falls
 back to the heuristic. Check `pystreampdf.tokenizer.TOKENIZER_MODE` to see
-which mode produced a given number. The savings figures in the table above
-were measured using the heuristic mode; your exact numbers with `tiktoken`
-enabled may differ slightly.
+which mode produced a given number.
+
+Actual token savings depend entirely on your documents and how narrowly
+you scope `extract_relevant`-style queries — there's no committed
+benchmark result in this repo backing a specific percentage (the earlier
+"70%"/"10-50x" style claims in this README and in `__init__.py`'s
+docstring weren't measured against anything checked in). Run
+[examples/token_budget_and_cache_example.py](examples/token_budget_and_cache_example.py)
+against your own documents to get a real number for your use case.
 
 ---
 
@@ -206,6 +190,27 @@ exposing document-processing tools (extract text/tables/images, OCR,
 structure detection, metadata, chunking, citations, validation). It's
 opt-in, binds to `127.0.0.1` only, and requires `allow_remote=True` to be
 exposed beyond localhost. See [examples/mcp_pystreampdf.py](examples/mcp_pystreampdf.py).
+
+## Known Issues
+
+- Earlier versions of this README documented a `Document` class with
+  `.extract_relevant()` and a `.token_savings` attribute — verified
+  against source: this class has never existed in this package. Fixed
+  in this pass to describe the real, exported API (`SemanticChunker`,
+  `PDFCache`, `TokenBudgetConfig`, and the Rust-backed `pystreampdf.open()`).
+- The published PyPI wheel (`pystreampdf-2.2.1-cp313-cp313-macosx_11_0_arm64.whl`)
+  is the only wheel on PyPI — macOS arm64, Python 3.13 only, no sdist. On
+  any other platform or Python version, `pip install` will fail without a
+  local Rust toolchain to build from source.
+- The published version (2.2.1) is ahead of what's tagged in this repo's
+  `Cargo.toml`/`__init__.py` (2.2.0) — there's no commit here bumping to
+  2.2.1, so it's unclear what changed between the two without checking the
+  PyPI release directly.
+- The Rust-backed `pystreampdf.open()` / `pystreampdf.load_index()` API
+  (used in `examples/basic_parse.py`) silently becomes `None` if the
+  compiled `_core` extension isn't available (e.g. a from-source install
+  without `maturin develop`) — falling back to `SemanticChunker`/`PDFCache`
+  in that case, per the code above, not a hard error.
 
 ## License
 

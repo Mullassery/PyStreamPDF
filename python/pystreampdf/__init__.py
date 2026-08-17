@@ -1,7 +1,8 @@
 """PyStreamPDF - Intelligence Engine for PDFs.
 
 Intelligent PDF parsing, retrieval, and context extraction for AI agents.
-Reduces token usage by 10-50x while maintaining accuracy.
+Actual token savings depend on your documents — see the README's "Token
+Savings" section rather than relying on a fixed multiplier here.
 """
 
 __version__ = "2.2.0"  # Real encryption/permission detection, honest parse-failure signaling, security hardening
