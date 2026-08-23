@@ -211,16 +211,20 @@ exposed beyond localhost. See [examples/mcp_pystreampdf.py](examples/mcp_pystrea
   compiled `_core` extension isn't available (e.g. a from-source install
   without `maturin develop`) — falling back to `SemanticChunker`/`PDFCache`
   in that case, per the code above, not a hard error.
-- The "Tests & Build" GitHub Actions workflow has failed on every run for
-  the last several weeks (verified via `gh run list`), including the
-  latest commit on `main`. The cause is CI infrastructure, not the test
-  suite itself: `dtolnay/rust-toolchain@v1` now requires an explicit
-  `toolchain` input that the workflow doesn't provide, so both the
-  Rust-build and Python-test jobs fail before pytest ever runs. Running
-  `pytest tests/` locally (Python 3.13, with `maturin develop --release`
-  and `libpdfium` present) passes cleanly: 536 passed, 2 skipped — matching
-  the badge above — but this has not been confirmed green in CI itself
-  since at least early August.
+- The "Tests & Build" GitHub Actions workflow was red for several weeks
+  due to two CI infrastructure bugs (not the test suite itself), both
+  now fixed and confirmed green in CI:
+  [run 32611116541](https://github.com/Mullassery/PyStreamPDF/actions/runs/32611116541).
+  First, `dtolnay/rust-toolchain@v1` required an explicit `toolchain`
+  input the workflow didn't provide, failing both jobs before any tests
+  ran — fixed by pinning to `dtolnay/rust-toolchain@stable`. Second, once
+  that was fixed, `maturin develop` failed in the Python-test job because
+  `actions/setup-python` doesn't provide an active virtualenv, which
+  maturin requires — fixed by creating and activating a `.venv` before
+  the build step. Actual CI output: `pytest` — 536 passed, 2 skipped
+  (Python 3.10, 3.11, and 3.12, each identical); `cargo test` — 23 passed,
+  0 failed. (The Rust suite has 23 tests, not 536 — an earlier version of
+  this section conflated the pytest count with the Rust one.)
 
 ## License
 
