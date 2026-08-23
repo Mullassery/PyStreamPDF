@@ -211,6 +211,16 @@ exposed beyond localhost. See [examples/mcp_pystreampdf.py](examples/mcp_pystrea
   compiled `_core` extension isn't available (e.g. a from-source install
   without `maturin develop`) — falling back to `SemanticChunker`/`PDFCache`
   in that case, per the code above, not a hard error.
+- The "Tests & Build" GitHub Actions workflow has failed on every run for
+  the last several weeks (verified via `gh run list`), including the
+  latest commit on `main`. The cause is CI infrastructure, not the test
+  suite itself: `dtolnay/rust-toolchain@v1` now requires an explicit
+  `toolchain` input that the workflow doesn't provide, so both the
+  Rust-build and Python-test jobs fail before pytest ever runs. Running
+  `pytest tests/` locally (Python 3.13, with `maturin develop --release`
+  and `libpdfium` present) passes cleanly: 536 passed, 2 skipped — matching
+  the badge above — but this has not been confirmed green in CI itself
+  since at least early August.
 
 ## License
 
