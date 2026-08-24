@@ -39,6 +39,7 @@ None - v2.1.0 production-ready
 - [ ] Cross-project token budget integration tests
 - [ ] Performance benchmarking (budget calculation latency)
 - [ ] Load testing (1000+ documents with rules)
+- [ ] Real-world multi-column and scanned-PDF test fixtures — `OcrPipeline`/`TableValidator` already handle scanned-doc routing and table-structure validation, but `tests/` has no true multi-column layout or realistic scanned-image fixtures (only synthetic single-glyph images and mocks); malformed/truncated-file coverage already exists in `tests/test_security.py`
 
 #### Documentation
 - [x] TOKEN_BUDGET_MULTIPLIERS.md (comprehensive guide)
