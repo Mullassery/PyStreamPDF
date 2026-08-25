@@ -9,7 +9,7 @@ below for how much that saves in practice — it depends on your documents.
 
 [![PyPI](https://img.shields.io/pypi/v/pystreampdf)](https://pypi.org/project/pystreampdf)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org)
-[![Tests: 536 Passing](https://img.shields.io/badge/tests-536%20passing-success)](./tests)
+[![Tests: 557 Passing](https://img.shields.io/badge/tests-557%20passing-success)](./tests)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-blue.svg)](./LICENSE)
 
 ---
@@ -63,7 +63,7 @@ existed in source; see Known Issues.
 - **Token Budgeting:** Allocate tokens by document type
 - **Smart Caching:** L1 memory + L2 disk (HMAC-signed on disk — no unverified deserialization)
 - **Metadata Preservation:** Keep tables, images, structure
-- **Production-Ready:** 536 passing tests (2 skipped when optional OCR system deps aren't installed)
+- **Production-Ready:** 557 passing tests (2 skipped when optional OCR system deps aren't installed)
 
 ---
 
@@ -198,14 +198,14 @@ exposed beyond localhost. See [examples/mcp_pystreampdf.py](examples/mcp_pystrea
   against source: this class has never existed in this package. Fixed
   in this pass to describe the real, exported API (`SemanticChunker`,
   `PDFCache`, `TokenBudgetConfig`, and the Rust-backed `pystreampdf.open()`).
-- The published PyPI wheel (`pystreampdf-2.2.1-cp313-cp313-macosx_11_0_arm64.whl`)
-  is the only wheel on PyPI — macOS arm64, Python 3.13 only, no sdist. On
-  any other platform or Python version, `pip install` will fail without a
-  local Rust toolchain to build from source.
-- The published version (2.2.1) is ahead of what's tagged in this repo's
-  `Cargo.toml`/`__init__.py` (2.2.0) — there's no commit here bumping to
-  2.2.1, so it's unclear what changed between the two without checking the
-  PyPI release directly.
+- The published PyPI wheel is macOS arm64 only — no Linux/Windows wheel.
+  Starting with 2.3.0, a source distribution is also published, so
+  `pip install` on another platform will build from source rather than
+  fail outright, but it still needs a local Rust toolchain and a
+  discoverable `libpdfium` (see `scripts/download_pdfium.sh`) to succeed.
+- ~~The published version (2.2.1) is ahead of what's tagged in this repo's
+  Cargo.toml/__init__.py (2.2.0)~~ Resolved: 2.3.0 (this release) is
+  unambiguously ahead of both 2.2.0 and 2.2.1.
 - The Rust-backed `pystreampdf.open()` / `pystreampdf.load_index()` API
   (used in `examples/basic_parse.py`) silently becomes `None` if the
   compiled `_core` extension isn't available (e.g. a from-source install
@@ -221,10 +221,12 @@ exposed beyond localhost. See [examples/mcp_pystreampdf.py](examples/mcp_pystrea
   that was fixed, `maturin develop` failed in the Python-test job because
   `actions/setup-python` doesn't provide an active virtualenv, which
   maturin requires — fixed by creating and activating a `.venv` before
-  the build step. Actual CI output: `pytest` — 536 passed, 2 skipped
-  (Python 3.10, 3.11, and 3.12, each identical); `cargo test` — 23 passed,
-  0 failed. (The Rust suite has 23 tests, not 536 — an earlier version of
-  this section conflated the pytest count with the Rust one.)
+  the build step. Actual CI output as of 2.2.0: `pytest` — 536 passed, 2
+  skipped (Python 3.10, 3.11, and 3.12, each identical); `cargo test` — 23
+  passed, 0 failed. (The Rust suite has 23 tests, not 536 — an earlier
+  version of this section conflated the pytest count with the Rust one.)
+  As of 2.3.0: `pytest` — 557 passed, 2 skipped (21 new tests added for
+  `tests/test_mcp_tools.py`).
 
 ## License
 
@@ -232,4 +234,4 @@ Proprietary License — Free to use with explicit attribution. See [LICENSE](LIC
 
 ---
 
-**PyStreamPDF v2.2.0** | Intelligent PDF processing for AI | Python 3.9+ | 536 passing tests
+**PyStreamPDF v2.3.0** | Intelligent PDF processing for AI | Python 3.9+ | 557 passing tests

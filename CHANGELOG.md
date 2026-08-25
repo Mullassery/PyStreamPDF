@@ -4,6 +4,49 @@ All notable changes to StreamPDF are documented here.
 
 ---
 
+## [2.3.0] - 2026-08-25 - Real MCP Tool Implementations
+
+`PyStreamPDFMCPHandler` (`python/pystreampdf/_mcp_tools.py`) previously
+ignored `pdf_path` entirely in every one of its 12 tool methods and
+returned the exact same hardcoded fixture dict regardless of input --
+most notably `validate_pdf` always reported `is_valid: True`, even for a
+nonexistent or genuinely corrupted file, and `apply_ocr` always reported
+`confidence: 0.92` without ever running OCR.
+
+### Fixed (correctness / honesty)
+
+- All 12 MCP tool handlers now call into the real, already-tested
+  implementations elsewhere in this package instead of returning fixture
+  data:
+  - `extract_text` / `extract_metadata` / `detect_document_structure` /
+    `detect_forms` -- the Rust-backed `pystreampdf.open()` document API
+    (`.page()`, `.metadata`, `.structure`, `.form_fields()`).
+  - `extract_tables` / `extract_images` -- real content regions
+    (`page.regions`, filtered by `region_type`).
+  - `apply_ocr` -- the real hybrid `ocr.OcrPipeline` (routes scanned pages
+    through Tesseract/PaddleOCR via `is_likely_scanned`, text pages through
+    the existing fast Rust extraction). Honestly reports
+    `{"status": "unavailable"}` if no OCR provider is installed, rather
+    than fabricating a confidence score.
+  - `chunk_document` -- the real, already-exported `SemanticChunker`.
+  - `validate_pdf` -- attempts a real `pystreampdf.open()` (reporting the
+    real PDFium error on failure) and runs `validation.TextValidator`
+    against sampled page text for corruption/repetition signals.
+  - `extract_citations` -- a real (regex-based, not fabricated-count)
+    citation detector for numbered (`[1]`) and author-year
+    (`(Smith, 2020)`) styles.
+  - `export_processed_document` -- real markdown (via the Rust navigator's
+    `page_to_markdown`) and JSON export.
+- `detect_language` and `export_processed_document(output_format="html"|"docx")`
+  have no real implementation anywhere in this package (no
+  language-detection library is a dependency; no HTML/DOCX writer exists)
+  -- these now return `{"status": "not_implemented", ...}` rather than a
+  fabricated result.
+- New `tests/test_mcp_tools.py` (21 tests) exercises all of the above
+  against real PDFs generated with `reportlab`, including the corrupted-
+  and nonexistent-file cases that the old fixture-backed `validate_pdf`
+  could never actually fail.
+
 ## [2.2.0] - 2026-08-12 - Real Security Behavior, Honest Failure Signaling
 
 This release fixes security-behavior bugs from earlier versions where the

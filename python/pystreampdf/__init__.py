@@ -5,7 +5,7 @@ Actual token savings depend on your documents — see the README's "Token
 Savings" section rather than relying on a fixed multiplier here.
 """
 
-__version__ = "2.2.0"  # Real encryption/permission detection, honest parse-failure signaling, security hardening
+__version__ = "2.3.0"  # Real MCP tool implementations (extract/OCR/validate/etc.), previously all hardcoded fixture data
 
 # Optional: Rust core bindings (requires maturin build)
 try:
