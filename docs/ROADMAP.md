@@ -1,239 +1,122 @@
-# PyStreamPDF v2.1.0: Task Roadmap
+# PyStreamPDF: Roadmap
 
-## Current Status: Production Ready
+**Version:** 2.3.0 (current, per `Cargo.toml` / `python/pystreampdf/__init__.py`)
+**Last updated:** 2026-09-06
 
-**Version:** 2.1.0  
-**Status:** Production Ready (Token Budget System GA)  
-**Last Updated:** 2026-08-02  
+## Honest status (read this first)
 
-## Recent Releases
+Earlier versions of this roadmap (and of `docs/PRODUCT_VISION.md`)
+described PyStreamPDF as part of an "MCP 2.0 Platform" spanning 18-19
+projects with a fixed port assignment, listed unmeasured adoption/uptime/
+SLA targets, and set hard calendar deadlines (Q3 2026, Q4 2026, 2027) for
+speculative features like "ML-based multiplier strategies" and "autonomous
+rule optimization." None of that was backed by anything verifiable in this
+repo, and the calendar targets didn't track what was actually built. This
+rewrite drops the platform framing and unverified metrics, and replaces
+the phase/quarter structure with what's actually shipped and what's
+realistically next.
 
-### v2.1.0 (Current) ✅
-- ✅ **Token Budget Multipliers** - Intelligent scaling (500-1000 tokens)
-- ✅ **Smart Budget Rules** - Keyword-based configuration (YAML + Python)
-- ✅ **Multi-field Matching** - Filename, title, content detection
-- ✅ **Comprehensive Documentation** - TOKEN_BUDGET_MULTIPLIERS.md guide
-- ✅ **523 Unit Tests** - 100% pass rate
-- ✅ **Updated Architecture** - Token budget integration
+## What's real and working (with evidence)
 
-## Pending Tasks by Priority
+- **Token budget system** — `python/pystreampdf/token_budget.py`
+  (`TokenBudgetConfig`, `BudgetRule`): keyword/field-based multiplier rules
+  that scale allocation within a fixed 500–1000 token range. Covered by
+  `tests/test_token_budget.py`.
+- **Semantic chunking** — `python/pystreampdf/extraction.py`
+  (`SemanticChunker`): splits text into token-aware chunks by element
+  type, not naive word-count splitting. Exercised in
+  `tests/test_extraction.py` and the runnable
+  `examples/token_budget_and_cache_example.py`.
+- **Dual-tier cache** — `python/pystreampdf/cache.py` (`PDFCache`): memory
+  (L1) + disk (L2), HMAC-SHA256 signed on disk with owner-only (0600)
+  permissions; a tampered cache file is rejected before deserialization.
+  Covered by `tests/test_cache.py` and `tests/test_security.py`.
+- **Real PDF security handling** — `pystreampdf._core.PyPdfDocument` uses
+  PDFium's actual encryption/permission APIs (`is_encrypted()`,
+  `permissions()`, `open_with_password()`); this replaced a stub that used
+  to silently fall back to unauthenticated parsing (fixed in commit
+  `3580f80`).
+- **OCR + validation pipelines** — `ocr/manager.py`,
+  `ocr/providers/{tesseract,paddle}.py`, and
+  `validation/{layout,table,text,scorer}.py` are real implementations with
+  dedicated test files, not placeholders.
+- **CI actually runs the suite** — `.github/workflows/ci.yml` runs
+  `cargo test --release --all-features` and `pytest tests/` across Python
+  3.10/3.11/3.12 on every push/PR. CI was red for several weeks from two
+  infra bugs (an under-specified `rust-toolchain` action input, and
+  `maturin develop` needing an active venv that `actions/setup-python`
+  doesn't provide) — both fixed (commits `6ebb03f`, `3e5a651`); the last
+  confirmed-green run (linked from README.md) reported `pytest`: 557
+  passed / 2 skipped, `cargo test`: 23 passed / 0 failed.
+- **MCP tool handlers now call real code.** `_mcp_tools.py` /
+  `_mcp_connector.py` were rewired in commit `39f7c8c` (CHANGELOG 2.3.0):
+  all 12 tool methods previously ignored their input and returned
+  identical hardcoded fixture data (e.g. `validate_pdf` always reported
+  `is_valid: True`; `apply_ocr` always reported `confidence: 0.92` without
+  running OCR). They now call the real extraction/OCR/validation/citation
+  code paths described above.
 
-### 🚨 CRITICAL (Blocking Production)
-None - v2.1.0 production-ready
+## What's partial, scaffolding, or unverified
 
-### 🔴 HIGH (Before Q4 2026)
+- **No committed token-savings benchmark.** Earlier README/docstring
+  claims of "70% reduction" or "10-50x" savings were never backed by a
+  checked-in benchmark and have been retracted in README.md. Actual
+  savings depend on the caller's documents and query scoping.
+- **Narrow wheel coverage.** Only a macOS arm64 wheel is published to
+  PyPI. A source distribution ships as of 2.3.0, so other platforms build
+  from source, but that still needs a local Rust toolchain and a
+  discoverable `libpdfium`.
+- **No realistic multi-column / scanned-PDF test fixtures.** The OCR and
+  table-validation code is real and unit-tested, but `tests/` only has
+  synthetic single-glyph images and mocks — no true multi-column layout or
+  realistic scanned-document fixtures exist yet.
+- **Cross-project integration claims are unverified from this repo.**
+  Earlier docs listed StatGuardian as an inbound dependency and
+  PyInferenceManager/PyStreamMCP as downstream consumers. Nothing in this
+  repo's code imports from or is imported by those projects — treat this
+  as an intended integration, not a demonstrated one.
+- **The MCP handler rewire (`39f7c8c`) is new** and currently only
+  unit-tested; it hasn't accumulated real invocation history yet.
 
-#### Token Budget Enhancement (NEW)
-- [x] Implement multiplier-based budget scaling
-- [x] Multi-field keyword matching
-- [x] YAML configuration support
-- [x] Comprehensive documentation (TOKEN_BUDGET_MULTIPLIERS.md)
-- [ ] Advanced multiplier strategies (contextual, ML-based)
-- [ ] Budget optimization metrics
-- [ ] Performance profiling for budget decisions
+## Near-term roadmap (concrete, not calendar-committed)
 
-#### Testing & Quality
-- [x] Token budget tests (16 tests, all passing)
-- [x] Cache integration tests with budgets
-- [x] Field matching tests
-- [ ] Cross-project token budget integration tests
-- [ ] Performance benchmarking (budget calculation latency)
-- [ ] Load testing (1000+ documents with rules)
-- [ ] Real-world multi-column and scanned-PDF test fixtures — `OcrPipeline`/`TableValidator` already handle scanned-doc routing and table-structure validation, but `tests/` has no true multi-column layout or realistic scanned-image fixtures (only synthetic single-glyph images and mocks); malformed/truncated-file coverage already exists in `tests/test_security.py`
+1. **Cross-platform wheels.** Build Linux (manylinux) and, ideally,
+   Windows wheels in CI so `pip install pystreampdf` doesn't require a
+   local Rust toolchain + PDFium outside macOS arm64.
+2. **Real OCR/layout test fixtures.** Replace the synthetic single-glyph
+   mocks with actual multi-column and scanned-document samples to give
+   the existing OCR/validation code meaningful coverage (already flagged
+   as a gap below in "Testing & Quality").
+3. **Exercise the rewired MCP handlers beyond unit tests.** Now that
+   `_mcp_tools.py` calls real extraction/OCR/validation code, add
+   integration-style tests that invoke it through the MCP/DAB connector
+   path, not just direct function calls.
+4. **If/when a token-savings number is worth publishing, measure it and
+   check the benchmark script into the repo** rather than restating a
+   percentage in prose. Until then, point users at
+   `examples/token_budget_and_cache_example.py` to measure their own
+   case.
 
-#### Documentation
-- [x] TOKEN_BUDGET_MULTIPLIERS.md (comprehensive guide)
-- [x] Updated ARCHITECTURE.md with budget system
-- [x] Updated README.md with examples
-- [x] Updated PRODUCT_VISION.md
-- [ ] Video tutorials for budget configuration
-- [ ] Budget tuning guidelines for specific domains
-- [ ] Budget impact analysis examples
+No committed dates: this project's actual recent pace (`git log`) has
+been fixing previously-fabricated claims, security stubs, and CI
+infrastructure — not shipping new large features on a quarterly cadence —
+so this roadmap intentionally doesn't restate one.
 
-#### Performance
-- [ ] Optimize budget rule matching
-- [ ] Cache budget calculations
-- [ ] Profile multiplier stacking performance
-- [ ] Benchmark rule evaluation on large datasets
+## Testing & Quality (current gaps, not aspirational)
 
-### 🟡 MEDIUM (Q3-Q4 2026)
-
-#### Features
-- [ ] Advanced error handling
-- [ ] Retry logic with exponential backoff
-- [ ] Graceful degradation
-- [ ] Fallback mechanisms
-
-#### Architecture
-- [ ] Code refactoring (simplify hot paths)
-- [ ] Remove technical debt
-- [ ] Modernize dependencies
-- [ ] Cleanup unused code
-
-#### Integration
-- [ ] Test with all 19 platform projects
-- [ ] Document cross-project workflows
-- [ ] Validate end-to-end scenarios
-- [ ] Performance testing at scale
-
-### 🟢 LOW (2027+)
-
-#### Enhancements
-- [ ] Machine learning optimizations
-- [ ] Predictive modeling
-- [ ] Advanced analytics
-- [ ] Autonomous features
-
-#### Platform
-- [ ] Enterprise features
-- [ ] SaaS deployment
-- [ ] Multi-tenancy
-- [ ] Advanced security
-
----
-
-## Phase Timeline
-
-### Phase 2.1: August 2026 ✅ (COMPLETE)
-**Goal:** Token Budget System Launch
-
-- ✅ Implement multiplier-based scaling (500-1000 range)
-- ✅ Multi-field keyword matching (filename, title, content)
-- ✅ YAML + Python configuration
-- ✅ Comprehensive documentation (TOKEN_BUDGET_MULTIPLIERS.md)
-- ✅ 16 unit tests (all passing)
-- ✅ Integration with caching system
-- **Completion:** 2026-08-02
-
-### Phase 2.2: Q3 2026 (Sep-Sep)
-**Goal:** Cross-project integration + performance tuning
-
-- Budget multiplier integration with PyStreamMCP
-- Token budget examples (examples/token_budget_*.py)
-- Cross-project integration testing
-- Performance benchmarking (<5ms rule evaluation)
-- **Completion Target:** 2026-09-30
-
-### Phase 3: Q4 2026 (Oct-Dec)
-**Goal:** Advanced features + enterprise optimization
-
-- Advanced multiplier strategies (ML-based)
-- Budget optimization metrics & analytics
-- Enterprise budget reporting
-- Domain-specific budget tuning guides
-- **Completion Target:** 2026-12-31
-
-### Phase 4: 2027
-**Goal:** AI-native enhancements + predictive budgeting
-
-- Predictive budget allocation
-- Autonomous rule optimization
-- Cross-document budget learning
-- Real-time budget adaptation
+- [x] Token budget tests (`tests/test_token_budget.py`)
+- [x] Cache integration tests with budgets (`tests/test_cache.py`)
+- [x] Field-matching tests
+- [x] Malformed/truncated-file coverage (`tests/test_security.py`)
+- [ ] Real multi-column layout and scanned-PDF fixtures (`OcrPipeline` /
+      `TableValidator` already handle routing and structure validation,
+      but there is no realistic fixture data backing that coverage)
+- [ ] Integration tests for the MCP/DAB connector path specifically
+- [ ] Any committed performance benchmark (latency, throughput, or token
+      savings) — none exist in this repo today
 
 ---
 
-## Testing Checklist
-
-### Unit Tests
-- [ ] All MCP tool handlers tested
-- [ ] Edge case coverage
-- [ ] Error path testing
-- [ ] Performance regression tests
-
-### Integration Tests
-- [ ] With dependent projects
-- [ ] Cross-project workflows
-- [ ] End-to-end scenarios
-- [ ] Production-like data volumes
-
-### Performance Tests
-- [ ] Latency benchmarks (<100ms)
-- [ ] Throughput testing
-- [ ] Memory profiling
-- [ ] Connection pooling
-
----
-
-## Dependency Status
-
-### Inbound Dependencies
-Check status of upstream projects:
-- [ ] All inbound dependencies are v2.0.0+
-- [ ] No breaking API changes
-- [ ] Security patches applied
-
-### Outbound Dependency Status
-Monitor projects depending on this one:
-- [ ] All dependent projects passing tests
-- [ ] No regression reports
-- [ ] SLA targets maintained
-
----
-
-## Release Checklist (v2.1.0) ✅ COMPLETE
-
-Pre-release verification:
-- ✅ All tests passing (523 tests, >95% coverage)
-- ✅ Token budget system documented (TOKEN_BUDGET_MULTIPLIERS.md)
-- ✅ Architecture updated (token budget integration)
-- ✅ README updated (examples + budget guide)
-- ✅ Performance benchmarks met (<5ms rule evaluation)
-- ✅ Security audit completed
-- ✅ Changelog updated
-- ✅ Version bumped (v2.0.0 → v2.1.0)
-- ✅ Wheels built (wheels-only distribution)
-- ✅ GitHub tag created
-- ✅ PyPI package ready for publication
-
-## Next Release: v2.2.0 (Q3 2026)
-
-Pre-release planning:
-- [ ] Advanced multiplier strategies
-- [ ] Budget optimization metrics
-- [ ] Cross-project integration tests
-- [ ] Domain-specific tuning guides
-- [ ] Performance profiling (<2ms rule evaluation)
-- [ ] Enterprise reporting features
-
----
-
-## Metrics & Success Criteria
-
-### Performance Targets
-- Latency: <100ms (p99)
-- Throughput: Platform-dependent
-- Memory: <200MB (typical)
-- CPU: <50% single core
-
-### Quality Targets
-- Test Coverage: >80%
-- MCP Tool Coverage: 100%
-- Documentation: 100%
-- Uptime: >99.5%
-
-### Adoption Targets
-- Integrated with all dependent projects
-- Used in production by >5 teams
-- Zero critical bugs in Phase 2
-
----
-
-## Questions & Decisions
-
-- [ ] Should we add async streaming support?
-- [ ] Do we need multi-region deployment?
-- [ ] What's the migration path from v2.0.0 → v2.1.0?
-- [ ] Should we support older Python versions (<3.10)?
-
----
-
-## Contact & Escalation
-
-**Primary Owner:** Product Team  
-**Escalation Contact:** Platform Lead  
-**Review Schedule:** Every 2 weeks (Phase 2-3)  
-
----
-
-**Next Review:** 2026-08-14 (Phase 2 progress check)
+This file replaces the previous phase/quarter-based planning, which
+didn't reflect actual delivery pace. See README.md's "Known Issues"
+section for the fuller, itemized list of verified vs. retracted claims.
