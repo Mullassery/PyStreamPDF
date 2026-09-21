@@ -99,6 +99,6 @@ of those are backed by anything in this repo.
 
 ---
 
-**Status:** Actively maintained; see docs/ROADMAP.md and README.md's
-"Known Issues" for the current itemized state.
+**Status:** See docs/ROADMAP.md and README.md's "Known Issues" for the
+current itemized state of what works, what's partial, and what's broken.
 **Last verified:** 2026-09-06 against commit `5c3a6de` (HEAD).

@@ -63,7 +63,7 @@ existed in source; see Known Issues.
 - **Token Budgeting:** Allocate tokens by document type
 - **Smart Caching:** L1 memory + L2 disk (HMAC-signed on disk — no unverified deserialization)
 - **Metadata Preservation:** Keep tables, images, structure
-- **Production-Ready:** 557 passing tests (2 skipped when optional OCR system deps aren't installed)
+- **Tested:** 557 passing tests (2 skipped when optional OCR system deps aren't installed) — run with `pytest tests/`, see "Documentation" below for CI results
 
 ---
 
@@ -135,11 +135,12 @@ pip install "pystreampdf[tiktoken]"
 
 ## Documentation
 
-- [Quick Start](docs/QUICKSTART.md) — Process your first PDF
-- [Extraction Strategies](docs/EXTRACTION.md) — Different approaches for different documents
-- [Token Budgeting](docs/TOKEN_BUDGETS.md) — Control context allocation
 - [Token Budget Multipliers](docs/TOKEN_BUDGET_MULTIPLIERS.md) — Comprehensive token budget guide with examples
-- [Examples](examples/) — Real-world RAG optimization
+- [Product Vision](docs/PRODUCT_VISION.md) — What's real and working vs. partial/unverified, verified against source
+- [Roadmap](docs/ROADMAP.md) — Same honest-status treatment plus near-term plans and known testing gaps
+- [Examples](examples/) — Real, runnable scripts: [basic_parse.py](examples/basic_parse.py) (Rust-backed document API), [token_budget_and_cache_example.py](examples/token_budget_and_cache_example.py) (SemanticChunker/PDFCache), [mcp_pystreampdf.py](examples/mcp_pystreampdf.py) (MCP connector)
+
+There is no separate Quick Start / Extraction Strategies / Token Budgeting guide beyond what's above — earlier revisions of this README linked to `docs/QUICKSTART.md`, `docs/EXTRACTION.md`, and `docs/TOKEN_BUDGETS.md`, none of which exist in this repo. Those dead links have been removed; the "30-Second Start" section above and the `examples/` scripts are the actual quick-start material.
 
 ## Quick Start: Document Extraction
 

@@ -1,0 +1,48 @@
+name: Dependency Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Every Monday at 06:00 UTC (offset from dependabot's 03:00 runs)
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  cargo-audit:
+    name: cargo audit (Rust dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        run: cargo audit
+
+  pip-audit:
+    name: pip-audit (Python dependencies)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install declared dependencies + pip-audit
+        # Installs the runtime and dev dependency set declared in pyproject.toml
+        # directly (not the package itself, which requires a Rust toolchain +
+        # PDFium to build) so pip-audit can scan the resolved dependency tree.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip install rich pyyaml tiktoken maturin pytest pytest-asyncio pytest-timeout reportlab
+
+      - name: Run pip-audit
+        run: pip-audit --skip-editable

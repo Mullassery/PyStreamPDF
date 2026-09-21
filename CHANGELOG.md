@@ -2,6 +2,49 @@
 
 All notable changes to StreamPDF are documented here.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [Unreleased]
+
+### Fixed
+
+- `Cargo.toml` and `pyproject.toml` `repository`/`Issues` URLs pointed at
+  `github.com/Mullassery/StreamPDF` (missing the `Py` prefix) instead of
+  the actual repo, `github.com/Mullassery/PyStreamPDF` — wrong metadata on
+  crates.io/PyPI project pages.
+- README.md's Documentation section linked to `docs/QUICKSTART.md`,
+  `docs/EXTRACTION.md`, and `docs/TOKEN_BUDGETS.md`, none of which exist
+  in this repo — replaced with links to the docs and examples that
+  actually exist.
+- `CONTRIBUTING.md` still said contributions are licensed "MIT" after the
+  project relicensed to Apache-2.0 (commit `5c3a6de`) — corrected.
+- `docs/PRODUCT_VISION.md` described the project's status as "Actively
+  maintained" — removed per this repo's own honesty policy (see
+  `docs/ROADMAP.md`'s "Honest status" section); status is whatever the
+  itemized lists in that file and README's "Known Issues" actually say.
+- README.md described the test suite as "Production-Ready" — reworded to
+  "Tested" since "production-ready" isn't a claim this repo backs with
+  anything beyond the test count itself.
+- `.github/workflows/ci.yml` used `actions/setup-python@v4`, which
+  `actionlint` flags as too old to run on GitHub Actions' current
+  runners — bumped to `@v7`.
+
+### Added
+
+- `.github/workflows/audit.yml` — `cargo audit` (Rust) and `pip-audit`
+  (Python) dependency vulnerability scan, on push/PR to `main` and a
+  weekly schedule. Not runnable/verified in this sandbox (no network
+  access to the crates.io/PyPI advisory databases here) — needs a real
+  CI run to confirm it passes.
+- `[tool.maturin] include = ["LICENSE"]` in `pyproject.toml` as a
+  precaution against sdist builds omitting `LICENSE` (a recurring issue
+  in sibling projects using the same maturin/PyO3 setup); not confirmed
+  broken here specifically (maturin isn't installed in this sandbox to
+  test), but cheap and safe to add regardless.
+- `SECURITY.md`, `CODE_OF_CONDUCT.md`, `.github/pull_request_template.md`.
+
 ---
 
 ## [2.3.0] - 2026-08-25 - Real MCP Tool Implementations
@@ -361,8 +404,8 @@ version bump rather than a patch.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon)
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-MIT License — See [LICENSE](LICENSE)
+Apache License 2.0 — See [LICENSE](LICENSE)

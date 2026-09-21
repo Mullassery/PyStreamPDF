@@ -115,6 +115,91 @@ so this roadmap intentionally doesn't restate one.
 - [ ] Any committed performance benchmark (latency, throughput, or token
       savings) — none exist in this repo today
 
+## Technical Debt (verified 2026-09-20, file:line specific)
+
+Found during an OSS-standardization pass. Not fixed in that pass
+(disclosure-first, not fix-everything) except where noted — these are
+candidates for a dedicated follow-up session.
+
+- **Lint debt is real and CI doesn't catch it.** `.pre-commit-config.yaml`
+  configures `black` and `ruff`/`ruff-format`, but `.github/workflows/ci.yml`
+  never runs them — only `cargo build`/`cargo test` and `pytest`. Actually
+  running them against this repo (2026-09-20, ruff 0.x / black 24.7.0-class
+  behavior) found:
+  - `ruff check python/ tests/` reports **771 errors** (169 auto-fixable).
+    Biggest categories: 96 unsorted-import blocks (I001), 92 deprecated
+    `typing` imports (UP035, e.g. `List`/`Dict` instead of `list`/`dict`),
+    57 unused imports (F401), 25 bare/blind `except Exception` (BLE001),
+    12 unused variables (F841).
+  - `black --check python/ tests/` reports **73 of 88 files** would be
+    reformatted.
+  - This means the pre-commit hooks, if actually installed by a
+    contributor, would rewrite most of the codebase on first run — or, if
+    not installed (the common case, since CI doesn't enforce it), the
+    formatting/lint debt just accumulates silently. Recommend either
+    wiring `ruff check` + `black --check` into `ci.yml` as a real
+    (non-`|| true`) gate, or dropping the pretense of enforcing them.
+- **Swallowed exceptions that hide real failures** — `ruff check --select
+  E722,S110`:
+  - `python/pystreampdf/semantic/assembler.py:148` — bare `except: pass`
+    around `self.citations.top_cited(...)`; any failure in citation
+    lookup is silently dropped with no logging.
+  - `python/pystreampdf/cache.py:325`, `python/pystreampdf/ocr/manager.py:127`
+    and `:136`, `python/pystreampdf/ocr/providers/paddle.py:45`,
+    `python/pystreampdf/ocr/providers/tesseract.py:49`,
+    `python/pystreampdf/tokenizer.py:63` — `try/except: pass` with no
+    logging; failures in caching, OCR provider probing, and tokenizer
+    fallback are invisible to callers and to anyone debugging a report of
+    "OCR didn't run" or "token count looks wrong."
+- **Likely-unintended symbol shadowing** —
+  `python/pystreampdf/validation/__init__.py:18` imports `OcrTable` from
+  `.table`, then line 21 imports a *different* `OcrTable` from `.types`,
+  silently shadowing the first. Whichever one `pystreampdf.validation`
+  publicly re-exports as `OcrTable` is whatever was imported last
+  (`.types.OcrTable`); `.table.OcrTable` becomes unreachable via the
+  public import even though it's still exported from `.table` directly.
+  This needs someone who knows which `OcrTable` is canonical to resolve
+  (rename one, or make one re-export the other) — not fixed in this pass
+  because the two types were not diffed for behavioral differences.
+- **`.pre-commit-config.yaml` has at least one broken hook entry.** The
+  `rustfmt` hook is configured under `repo: https://github.com/oxalica/nil`
+  (`nil` is a Nix language server, not a Rust formatter — this hook
+  reference cannot resolve to a working `rustfmt` hook as written). The
+  `rust-clippy` hook also pins `rev: master`, a floating branch ref rather
+  than a tag/SHA, which is non-reproducible (today's `master` may differ
+  from tomorrow's). Not fixed here: fixing the hook `repo:`/`rev:` values
+  requires network access to verify the correct working pre-commit
+  hook source, which this sandbox doesn't have.
+- **`cargo test --release --all-features` fails at the workspace level on
+  macOS** (verified in this pass): the `python` crate is a PyO3
+  `cdylib`/`extension-module` and cannot be executed as a standalone test
+  binary outside a Python process — it aborts with
+  `dyld: symbol not found in flat namespace '_PyBaseObject_Type'`. This
+  is a macOS linking quirk, not a code bug: `cargo test -p streampdf-core
+  --release --all-features` (the crate that actually has `#[test]`s) runs
+  clean — 23 passed, 0 failed, matching README's claimed count. CI runs on
+  `ubuntu-latest` where this isn't an issue (confirmed green per README's
+  linked run). Anyone testing workspace-wide on macOS should scope to
+  `-p streampdf-core` rather than assume the workspace-wide command is
+  broken.
+- **Stale/inconsistent dependabot branches.** `origin/dependabot/github_actions/actions/checkout-7`
+  and `origin/dependabot/github_actions/actions/setup-python-7` exist as
+  open dependabot branches, but diffing them against `main` shows they
+  also rewrite the Python test job to `cd python && pytest tests/`
+  (assuming a `python/tests/` layout) and drop the PDFium download +
+  `maturin develop` steps entirely — neither matches this repo's actual
+  layout (tests live at repo-root `tests/`; the native extension must be
+  built before `pytest` can import `pystreampdf._core`). These two
+  dependabot PRs would break CI if merged as-is; the underlying version
+  bump they're proposing (`actions/setup-python@v7`) has been applied
+  manually in this pass without the rest of that diff, but the dependabot
+  PRs themselves should be closed without merging (or dependabot needs to
+  regenerate them against the current workflow).
+- **`libpdfium.dylib` and `dist/*.whl`/`*.tar.gz` present in the working
+  tree but correctly gitignored** — not a bug (confirmed not tracked by
+  `git ls-files`), just noting they're local build artifacts from a prior
+  manual build/release and not part of the repo as published.
+
 ---
 
 This file replaces the previous phase/quarter-based planning, which

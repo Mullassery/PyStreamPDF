@@ -44,10 +44,11 @@ dev = [
 pystreampdf = "pystreampdf.cli:main"
 
 [project.urls]
-Repository = "https://github.com/Mullassery/StreamPDF"
-Issues = "https://github.com/Mullassery/StreamPDF/issues"
+Repository = "https://github.com/Mullassery/PyStreamPDF"
+Issues = "https://github.com/Mullassery/PyStreamPDF/issues"
 
 [tool.maturin]
 python-source = "python"
 module-name = "pystreampdf._core"
 manifest-path = "python/Cargo.toml"
+include = ["LICENSE"]
