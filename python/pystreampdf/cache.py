@@ -9,6 +9,7 @@ are recognized regardless of filename or location.
 
 import hashlib
 import hmac
+import logging
 import os
 import pickle
 import secrets
@@ -21,6 +22,8 @@ from pathlib import Path
 
 from .extraction import ContentChunk
 from .token_budget import TokenBudgetConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -322,8 +325,12 @@ class PDFCache:
                 os.write(fd, signature + payload)
             finally:
                 os.close(fd)
-        except Exception:
-            pass
+        except (OSError, pickle.PicklingError) as e:
+            # Best-effort disk cache: a write failure (disk full, permission
+            # denied, unpicklable content) just means this entry stays
+            # L1-only -- log it so a silently-slow/never-persisting cache is
+            # debuggable instead of invisible.
+            logger.debug("Failed to write L2 cache entry %s: %s", l2_path, e)
 
     def _re_evaluate_budget(self, doc: CachedDocument, filename: str) -> None:
         """Re-evaluate budget on cached document (config may have changed)."""

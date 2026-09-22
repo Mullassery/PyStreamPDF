@@ -130,7 +130,10 @@ candidates for a dedicated follow-up session.
     Biggest categories: 96 unsorted-import blocks (I001), 92 deprecated
     `typing` imports (UP035, e.g. `List`/`Dict` instead of `list`/`dict`),
     57 unused imports (F401), 25 bare/blind `except Exception` (BLE001),
-    12 unused variables (F841).
+    12 unused variables (F841). (After the 2026-09-22 exception-narrowing
+    fix below, `ruff check` reports 756 errors and
+    `--select E722,S110,BLE001` reports 20, down from 25 — the remaining
+    771/25 aren't otherwise touched; still real debt, still not fixed.)
   - `black --check python/ tests/` reports **73 of 88 files** would be
     reformatted.
   - This means the pre-commit hooks, if actually installed by a
@@ -139,37 +142,43 @@ candidates for a dedicated follow-up session.
     formatting/lint debt just accumulates silently. Recommend either
     wiring `ruff check` + `black --check` into `ci.yml` as a real
     (non-`|| true`) gate, or dropping the pretense of enforcing them.
-- **Swallowed exceptions that hide real failures** — `ruff check --select
-  E722,S110`:
-  - `python/pystreampdf/semantic/assembler.py:148` — bare `except: pass`
-    around `self.citations.top_cited(...)`; any failure in citation
-    lookup is silently dropped with no logging.
-  - `python/pystreampdf/cache.py:325`, `python/pystreampdf/ocr/manager.py:127`
-    and `:136`, `python/pystreampdf/ocr/providers/paddle.py:45`,
-    `python/pystreampdf/ocr/providers/tesseract.py:49`,
-    `python/pystreampdf/tokenizer.py:63` — `try/except: pass` with no
-    logging; failures in caching, OCR provider probing, and tokenizer
-    fallback are invisible to callers and to anyone debugging a report of
-    "OCR didn't run" or "token count looks wrong."
-- **Likely-unintended symbol shadowing** —
-  `python/pystreampdf/validation/__init__.py:18` imports `OcrTable` from
-  `.table`, then line 21 imports a *different* `OcrTable` from `.types`,
-  silently shadowing the first. Whichever one `pystreampdf.validation`
-  publicly re-exports as `OcrTable` is whatever was imported last
-  (`.types.OcrTable`); `.table.OcrTable` becomes unreachable via the
-  public import even though it's still exported from `.table` directly.
-  This needs someone who knows which `OcrTable` is canonical to resolve
-  (rename one, or make one re-export the other) — not fixed in this pass
-  because the two types were not diffed for behavioral differences.
-- **`.pre-commit-config.yaml` has at least one broken hook entry.** The
-  `rustfmt` hook is configured under `repo: https://github.com/oxalica/nil`
-  (`nil` is a Nix language server, not a Rust formatter — this hook
-  reference cannot resolve to a working `rustfmt` hook as written). The
-  `rust-clippy` hook also pins `rev: master`, a floating branch ref rather
-  than a tag/SHA, which is non-reproducible (today's `master` may differ
-  from tomorrow's). Not fixed here: fixing the hook `repo:`/`rev:` values
-  requires network access to verify the correct working pre-commit
-  hook source, which this sandbox doesn't have.
+- ~~**Swallowed exceptions that hide real failures**~~ **[Fixed 2026-09-22]**
+  — `semantic/assembler.py:148`, `cache.py:325`, `ocr/manager.py:127`/`:136`,
+  `ocr/providers/paddle.py:45`, `ocr/providers/tesseract.py:49`, and
+  `tokenizer.py:63` had bare/broad `except`/`except Exception: pass` with no
+  logging. All six narrowed to the specific exception type each call site
+  actually expects (`AttributeError`, `(OSError, pickle.PicklingError)`,
+  `ImportError` x3, `OSError`, `ValueError` respectively) and now log at
+  debug level instead of silently dropping the failure. See CHANGELOG
+  `[Unreleased]` for the per-site detail. One new gap surfaced in the
+  process, not fixed here: `semantic/assembler.py`'s `self.citations.top_cited(...)`
+  call always raised `AttributeError` because `CitationNetwork`
+  (`semantic/citations.py`) never implemented a `top_cited` method — the
+  citation-assembly branch of `ContextAssembler` has been dead code since
+  it was written (no caller in this repo ever constructs a
+  `ContextAssembler` with a real `citation_network`, and no test exercises
+  it). Implementing `top_cited` is real feature work, out of scope here.
+- ~~**Likely-unintended symbol shadowing**~~ **[Fixed 2026-09-22, not a
+  behavioral bug]** — `validation/__init__.py:18` and the `.types` import
+  block both named `OcrTable`, but diffing them showed `.table.py` never
+  defined its own `OcrTable` class — it only did `from .types import
+  OcrTable` and re-exported it. So both imports resolved to the identical
+  class object (confirmed via `table.OcrTable is types.OcrTable` ->
+  `True`); there was no shadowing of distinct behavior, just a confusing
+  double import of the same name from two paths. Removed the redundant
+  `OcrTable` re-import from `.table` in `validation/__init__.py` and
+  `validation/scorer.py` so it's imported from exactly one place
+  (`validation/types.py`, the actual definition). Full test suite
+  unaffected (557 passed / 2 skipped).
+- ~~**`.pre-commit-config.yaml` has at least one broken hook entry.**~~
+  **[Fixed 2026-09-22]** — `rustfmt` was configured under
+  `repo: https://github.com/oxalica/nil` (a Nix language server, not a Rust
+  formatter) and `rust-clippy` was pinned to the floating `rev: master`.
+  Fixed to match the convention already used in this org's other Rust
+  repos' `.pre-commit-config.yaml` (`PyStreamXL`, `PyRoboFrames`,
+  `statguardian`, `pyvectorhound`, `ClusterAudienceKit`):
+  `repo: https://github.com/rust-lang/rustfmt` @ `v1.7.0` and
+  `repo: https://github.com/rust-lang/rust-clippy` @ `v1.77.0`.
 - **`cargo test --release --all-features` fails at the workspace level on
   macOS** (verified in this pass): the `python` crate is a PyO3
   `cdylib`/`extension-module` and cannot be executed as a standalone test

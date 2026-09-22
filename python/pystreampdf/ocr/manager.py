@@ -4,8 +4,11 @@ OCR Manager for provider registration and selection.
 Provides a registry for OCR providers and handles dispatch to the appropriate provider.
 """
 
+import logging
 from typing import Dict, List, Optional
 from .provider import OcrProvider, OcrResult
+
+logger = logging.getLogger(__name__)
 
 
 class OcrManager:
@@ -124,8 +127,8 @@ class OcrManager:
             provider = TesseractProvider()
             if provider.is_available():
                 manager.register(provider)
-        except (ImportError, Exception):
-            pass
+        except ImportError as e:
+            logger.debug("Tesseract OCR provider unavailable: %s", e)
 
         # Try to register PaddleOCR
         try:
@@ -133,7 +136,7 @@ class OcrManager:
             provider = PaddleProvider()
             if provider.is_available():
                 manager.register(provider)
-        except (ImportError, Exception):
-            pass
+        except ImportError as e:
+            logger.debug("PaddleOCR provider unavailable: %s", e)
 
         return manager

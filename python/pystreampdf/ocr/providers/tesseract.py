@@ -4,10 +4,13 @@ Tesseract OCR provider implementation.
 Uses pytesseract and Pillow for text extraction from images.
 """
 
+import logging
 import time
 from typing import List, Optional
 
 from ..provider import OcrCapabilities, OcrProvider, OcrResult, TextRegion
+
+logger = logging.getLogger(__name__)
 
 
 class TesseractProvider(OcrProvider):
@@ -46,8 +49,11 @@ class TesseractProvider(OcrProvider):
             # Extract version number (usually "tesseract 4.1.1\n...")
             if version_str:
                 return version_str.split()[1] if len(version_str.split()) > 1 else "unknown"
-        except Exception:
-            pass
+        except OSError as e:
+            # pytesseract.TesseractNotFoundError subclasses EnvironmentError
+            # (OSError) -- can happen if the tesseract binary disappears
+            # between the is_available() check above and this call.
+            logger.debug("Tesseract version check failed: %s", e)
         return "unknown"
 
     @property

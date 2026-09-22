@@ -14,7 +14,10 @@ This module centralizes token counting:
   clearly labeled as approximate via `is_exact()` / `TOKENIZER_MODE`.
 """
 
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 try:
     import tiktoken as _tiktoken
@@ -60,9 +63,13 @@ def count_tokens(text: Optional[str]) -> int:
     if _ENCODING is not None:
         try:
             return len(_ENCODING.encode(text))
-        except Exception:
-            # Fall through to the heuristic if encoding unexpectedly fails
-            # (e.g. on pathological input) rather than raising.
-            pass
+        except ValueError as e:
+            # tiktoken's Encoding.encode() raises ValueError when text
+            # contains a "special token" sequence (e.g. "<|endoftext|>")
+            # that isn't in `allowed_special` -- fall through to the
+            # heuristic instead of raising, but log it since a silent
+            # switch to the approximate count is exactly the kind of
+            # "token count looks wrong" report this masks.
+            logger.debug("tiktoken encode() failed, falling back to heuristic: %s", e)
 
     return max(1, int(len(text) / HEURISTIC_CHARS_PER_TOKEN))

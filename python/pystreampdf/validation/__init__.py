@@ -15,7 +15,7 @@ Example:
 
 from .layout import LayoutValidator
 from .scorer import ConfidenceScorer
-from .table import OcrTable, TableValidator
+from .table import TableValidator
 from .text import TextValidator
 from .types import (
     OcrTable,

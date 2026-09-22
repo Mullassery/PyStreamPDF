@@ -1,11 +1,12 @@
 repos:
   - repo: https://github.com/rust-lang/rust-clippy
-    rev: master
+    rev: v1.77.0
     hooks:
       - id: clippy
+        args: ['--all-targets', '--', '-W', 'clippy::all']
 
-  - repo: https://github.com/oxalica/nil
-    rev: 2024.07.01
+  - repo: https://github.com/rust-lang/rustfmt
+    rev: v1.7.0
     hooks:
       - id: rustfmt
 

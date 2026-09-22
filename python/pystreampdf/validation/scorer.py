@@ -8,9 +8,9 @@ and provides actionable recommendations for OCR output quality.
 from typing import List, Optional, Tuple
 
 from .layout import LayoutValidator
-from .table import OcrTable, TableValidator
+from .table import TableValidator
 from .text import TextValidator
-from .types import PageConfidenceScore, Recommendation
+from .types import OcrTable, PageConfidenceScore, Recommendation
 
 
 class ConfidenceScorer:

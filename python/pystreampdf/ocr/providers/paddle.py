@@ -4,10 +4,13 @@ PaddleOCR provider implementation.
 Uses PaddleOCR for multi-language text extraction.
 """
 
+import logging
 import time
 from typing import List, Optional
 
 from ..provider import OcrCapabilities, OcrProvider, OcrResult, TextRegion
+
+logger = logging.getLogger(__name__)
 
 
 class PaddleProvider(OcrProvider):
@@ -42,8 +45,8 @@ class PaddleProvider(OcrProvider):
         try:
             import paddleocr
             return paddleocr.__version__ if hasattr(paddleocr, '__version__') else "unknown"
-        except Exception:
-            pass
+        except ImportError as e:
+            logger.debug("paddleocr import failed after is_available() succeeded: %s", e)
         return "unknown"
 
     @property

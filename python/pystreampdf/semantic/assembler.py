@@ -7,11 +7,14 @@ Assemble optimal context for AI queries using multiple strategies:
 - Tutorial: Progressive complexity
 """
 
+import logging
 from typing import List, Optional, Dict, Tuple, Set, Any
 from enum import Enum
 from dataclasses import dataclass, field
 
 from ..tokenizer import count_tokens, HEURISTIC_CHARS_PER_TOKEN
+
+logger = logging.getLogger(__name__)
 
 
 class AssemblyStrategy(str, Enum):
@@ -145,8 +148,16 @@ class ContextAssembler:
                 influential = self.citations.top_cited(limit=3)
                 for paper in influential:
                     sections.append(f"Citation: {paper}")
-            except:
-                pass
+            except AttributeError:
+                # CitationNetwork (semantic/citations.py) has no `top_cited`
+                # method today, so this always raises for the real type this
+                # parameter is documented to accept -- log it rather than
+                # hiding it so the gap is visible instead of silently
+                # producing citation-free output.
+                logger.debug(
+                    "citations.top_cited() unavailable on %r; skipping citation section",
+                    type(self.citations).__name__,
+                )
 
         # 3. Fill remaining space with relevant chunks
         remaining_tokens = max_tokens - total_tokens

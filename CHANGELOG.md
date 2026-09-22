@@ -10,6 +10,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `python/pystreampdf/validation/__init__.py` imported `OcrTable` twice --
+  once (redundantly) via `from .table import OcrTable, TableValidator` and
+  again via `from .types import (OcrTable, ...)`. Both names resolved to the
+  *same* class (`.table` itself just re-imports `OcrTable` from `.types`; it
+  never defined its own), so this wasn't a behavioral bug, but the double
+  import made the module look like it had two competing `OcrTable`
+  definitions with one silently shadowing the other. Removed the redundant
+  re-import from `.table` in both `validation/__init__.py` and
+  `validation/scorer.py` so `OcrTable` is imported from exactly one place
+  (`validation/types.py`, where it's actually defined). Verified via
+  `python -c "from pystreampdf.validation import OcrTable"` and the full
+  `pytest tests/` run (557 passed / 2 skipped, unchanged).
+- Narrowed several bare/blind `except`/`except Exception` blocks that were
+  silently swallowing failures with no logging, per `docs/ROADMAP.md`'s
+  Technical Debt list:
+  - `semantic/assembler.py:148` -- `self.citations.top_cited(...)` narrowed
+    to `except AttributeError`, now logged. Also flagging a real gap this
+    surfaced: `CitationNetwork` (`semantic/citations.py`) has no
+    `top_cited` method, so this call always raises for the type this
+    parameter is documented to accept; the citation-assembly feature is
+    effectively dead code today. Not implemented here (real feature work,
+    out of scope for this pass) -- added to `docs/ROADMAP.md`.
+  - `cache.py:325` (`_add_to_l2`) narrowed to
+    `except (OSError, pickle.PicklingError)`, now logged at debug level.
+  - `ocr/manager.py:127` and `:136` (`OcrManager.auto()`) narrowed the
+    redundant `except (ImportError, Exception)` (equivalent to bare
+    `except Exception` since `ImportError` is already an `Exception`
+    subclass) to `except ImportError`, now logged at debug level.
+  - `ocr/providers/paddle.py:45` (`version` property) narrowed to
+    `except ImportError`, now logged at debug level.
+  - `ocr/providers/tesseract.py:49` (`version` property) narrowed to
+    `except OSError`, matching `pytesseract.TesseractNotFoundError`
+    (subclasses `EnvironmentError`/`OSError`), now logged at debug level.
+  - `tokenizer.py:63` (`count_tokens`) narrowed to `except ValueError`,
+    matching tiktoken's documented failure mode (disallowed special-token
+    sequences in the input), now logged at debug level.
+  - Verified via `pytest tests/` (557 passed / 2 skipped, unchanged) --
+    none of these narrower except clauses were hiding test-relied-upon
+    behavior.
+- `.pre-commit-config.yaml`'s `rustfmt` hook pointed at
+  `repo: https://github.com/oxalica/nil` (a Nix language server, not a Rust
+  formatter) and `rust-clippy` was pinned to the floating `rev: master`.
+  Both fixed to match the convention used across this org's other Rust
+  repos (`PyStreamXL`, `PyRoboFrames`, `statguardian`, `pyvectorhound`,
+  `ClusterAudienceKit`): `repo: https://github.com/rust-lang/rustfmt` @
+  `v1.7.0` and `repo: https://github.com/rust-lang/rust-clippy` @
+  `v1.77.0`.
 - `Cargo.toml` and `pyproject.toml` `repository`/`Issues` URLs pointed at
   `github.com/Mullassery/StreamPDF` (missing the `Py` prefix) instead of
   the actual repo, `github.com/Mullassery/PyStreamPDF` — wrong metadata on
