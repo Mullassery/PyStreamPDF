@@ -47,6 +47,29 @@ def test_search_no_results(simple_pdf):
     assert isinstance(results, list)
 
 
+def test_search_hyphenated_query_does_not_crash(simple_pdf):
+    """Regression test found via real-world benchmarking against a genuine
+    arXiv paper: a raw natural-language query containing any hyphenated
+    compound word (e.g. "multi-head attention", "state-of-the-art",
+    "real-time") used to raise `Database error: Failed to collect results:
+    no such column: head` instead of searching, because the unescaped query
+    string was handed straight to FTS5's MATCH, which layers its own query
+    syntax (column filters, NOT, parentheses) on top of tokenization and
+    misparses a bareword like "head" following a hyphen as part of a
+    column-filter expression. Any hyphenated word in a query crashed the
+    search entirely -- fixed by quoting each term before it reaches MATCH."""
+    doc = pystreampdf.open(simple_pdf)
+    index = doc.build_index(":memory:")
+    for query in [
+        "multi-head attention",
+        "state-of-the-art results",
+        "real-time processing",
+        'a "quote" inside a query',
+    ]:
+        results = index.search(query, top_k=5)
+        assert isinstance(results, list)
+
+
 def test_pages_with_heading(simple_pdf):
     """Test heading search"""
     doc = pystreampdf.open(simple_pdf)

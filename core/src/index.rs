@@ -108,8 +108,9 @@ impl PdfIndex {
             )
             .map_err(|e| Error::DatabaseError(format!("Failed to prepare statement: {}", e)))?;
 
+        let sanitized_query = Self::sanitize_fts5_query(query);
         let results = stmt
-            .query_map(params![query, top_k], |row| {
+            .query_map(params![sanitized_query, top_k], |row| {
                 Ok(PageResult {
                     page_number: row.get(0)?,
                     score: -row.get::<_, f32>(1)?, // BM25 returns negative scores
@@ -121,6 +122,28 @@ impl PdfIndex {
             .map_err(|e| Error::DatabaseError(format!("Failed to collect results: {}", e)))?;
 
         Ok(results)
+    }
+
+    /// Escape a free-text query for safe use as an FTS5 MATCH string.
+    ///
+    /// FTS5 has its own query syntax (AND/OR/NOT, column filters like
+    /// `col:term`, parentheses, prefix `*`) layered on top of tokenization.
+    /// A raw natural-language query handed to MATCH unescaped can trip that
+    /// syntax in surprising ways -- e.g. `multi-head attention` fails with
+    /// "no such column: head", because FTS5 parses the bareword `head`
+    /// following a hyphen as part of a column-filter expression rather than
+    /// as a plain search term. Any hyphenated compound word (real-time,
+    /// state-of-the-art, well-known, ...) hits the same crash. Wrapping each
+    /// whitespace-separated term in double quotes (escaping embedded quotes)
+    /// forces FTS5 to treat it as a literal string token, sidestepping its
+    /// query-syntax layer entirely so plain-English queries always search
+    /// instead of erroring.
+    fn sanitize_fts5_query(query: &str) -> String {
+        query
+            .split_whitespace()
+            .map(|term| format!("\"{}\"", term.replace('"', "\"\"")))
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     pub fn pages_with_heading(&self, heading: &str) -> Result<Vec<PageResult>> {
