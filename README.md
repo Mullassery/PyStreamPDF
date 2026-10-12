@@ -1,5 +1,7 @@
 # PyStreamPDF
 
+[![Grapify](https://img.shields.io/badge/Grapify-Code%20Scan-purple)](https://grapify.ai)
+
 **Extract only what matters from PDFs, so you send less to LLMs.**
 
 Stop sending entire documents to LLMs. PyStreamPDF parses PDF structure and
