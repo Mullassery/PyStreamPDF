@@ -34,9 +34,9 @@ impl PyPdfDocument {
     }
 
     #[getter]
-    fn metadata(&self) -> PyResult<PyObject> {
+    fn metadata(&self) -> PyResult<pyo3::Py<pyo3::types::PyDict>> {
         let meta = self.inner.metadata();
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let dict = pyo3::types::PyDict::new(py);
             dict.set_item("title", meta.title)?;
             dict.set_item("author", meta.author)?;
@@ -669,13 +669,13 @@ impl PyAuditLog {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))
     }
 
-    fn events(&self) -> PyResult<Vec<PyObject>> {
+    fn events(&self) -> PyResult<Vec<pyo3::Py<pyo3::types::PyDict>>> {
         let events = self
             .inner
             .events()
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let mut result = Vec::new();
             for event in events {
                 let dict = pyo3::types::PyDict::new(py);
