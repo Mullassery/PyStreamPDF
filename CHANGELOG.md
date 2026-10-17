@@ -94,6 +94,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.1] - 2026-10-17
+
+### Fixed
+- Audit remediation: security hardening, correctness fixes, and lint/CI gates.
+
 ## [2.3.0] - 2026-08-25 - Real MCP Tool Implementations
 
 `PyStreamPDFMCPHandler` (`python/pystreampdf/_mcp_tools.py`) previously
