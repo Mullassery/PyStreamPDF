@@ -33,8 +33,12 @@ class DashboardDaemon:
                 self.process = subprocess.Popen(
                     self.dashboard_cmd,
                     shell=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
+                    # The daemon never reads the dashboard's output; using
+                    # PIPE here without draining it would let the child block
+                    # once the OS pipe buffer fills (deadlock) while we await
+                    # the process. Send output to DEVNULL instead.
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
                 )
                 
                 # Wait for process to complete

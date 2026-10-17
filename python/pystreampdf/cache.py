@@ -290,11 +290,19 @@ class PDFCache:
             data = pickle.loads(payload)
             if isinstance(data, dict) and data.get("version") == self.CACHE_VERSION:
                 return data.get("document")
-        except Exception:
+        except (
+            OSError,
+            ValueError,
+            EOFError,
+            pickle.UnpicklingError,
+            AttributeError,
+            ImportError,
+        ) as exc:
+            logger.warning("discarding unreadable cache entry %s: %s", l2_path, exc)
             try:
                 l2_path.unlink()
-            except OSError:
-                pass
+            except OSError as unlink_exc:
+                logger.debug("could not remove corrupt cache entry %s: %s", l2_path, unlink_exc)
         return None
 
     def _add_to_l1(self, file_hash: str, doc: CachedDocument) -> None:
