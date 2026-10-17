@@ -5,7 +5,7 @@ import logging
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ except ImportError:
             self._ready = False
 
         @abstractmethod
-        def get_mcp_tools(self) -> Dict[str, Any]:
+        def get_mcp_tools(self) -> dict[str, Any]:
             pass
 
         @abstractmethod
@@ -73,7 +73,7 @@ except ImportError:
                     pass
                 self._ready = False
 
-        def _generate_dab_config(self, tools: Dict[str, Any]) -> Dict:
+        def _generate_dab_config(self, tools: dict[str, Any]) -> dict:
             # Secure defaults: loopback-only host, no cross-origin access, and
             # permissions scoped to a "local" role rather than wildcard "*"/"*".
             # Callers that genuinely need remote access or wildcard permissions
@@ -93,14 +93,14 @@ except ImportError:
                             {"actions": permissions_actions, "roles": [permissions_role]}
                         ],
                     }
-                    for k in tools.keys()
+                    for k in tools
                 },
                 "rest": {"enabled": True, "path": "/api"},
                 "graphql": {"enabled": True, "path": "/graphql"},
                 "mcp": {"enabled": True, "path": "/mcp"},
             }
 
-        def _write_temp_config(self, config: Dict) -> str:
+        def _write_temp_config(self, config: dict) -> str:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 json.dump(config, f)
                 return f.name
@@ -137,7 +137,6 @@ class PDFProcessor:
         connector has no authentication of its own, so widening exposure is
         an explicit, deliberate choice for the caller.
         """
-        from pystreampdf._mcp_tools import PyStreamPDFMCPHandler, PyStreamPDFMCPTools
         self.mcp_connector = _MCPPDFConnector(
             pdf=self,
             port=port,
@@ -170,7 +169,7 @@ class _MCPPDFConnector(BaseMCPConnector):
         )
         self.pdf = pdf
 
-    def get_mcp_tools(self) -> Dict[str, Any]:
+    def get_mcp_tools(self) -> dict[str, Any]:
         from pystreampdf._mcp_tools import PyStreamPDFMCPTools
         return PyStreamPDFMCPTools.get_tools()
 

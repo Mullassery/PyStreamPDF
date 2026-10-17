@@ -3,7 +3,7 @@ Validation data types and result containers.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 @dataclass
@@ -26,7 +26,7 @@ class ValidationResult:
     """Result of validating a single text or structure."""
     status: str                                   # "valid" or "issues"
     confidence: float                             # 0.0-1.0: overall confidence in extraction quality
-    issues: List[ValidationIssue] = field(default_factory=list)
+    issues: list[ValidationIssue] = field(default_factory=list)
 
     def __post_init__(self):
         if not 0.0 <= self.confidence <= 1.0:
@@ -41,7 +41,7 @@ class TableValidationResult:
     status: str                                   # "valid" or "issues"
     confidence: float                             # 0.0-1.0
     estimated_accuracy: float = 1.0               # 0.0-1.0: fraction of cells that are plausible
-    issues: List[ValidationIssue] = field(default_factory=list)
+    issues: list[ValidationIssue] = field(default_factory=list)
 
     def __post_init__(self):
         if not 0.0 <= self.confidence <= 1.0:
@@ -53,9 +53,9 @@ class TableValidationResult:
 @dataclass
 class OcrTable:
     """Minimal OCR-extracted table structure."""
-    rows: List[List[str]]                    # Row-major: list of rows, each row is list of cell strings
+    rows: list[list[str]]                    # Row-major: list of rows, each row is list of cell strings
     page_number: Optional[int] = None
-    header: Optional[List[str]] = None       # Optional header row
+    header: Optional[list[str]] = None       # Optional header row
 
 
 @dataclass

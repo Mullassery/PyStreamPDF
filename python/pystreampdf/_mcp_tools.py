@@ -1,14 +1,14 @@
 """MCP 2.0 Tools for PyStreamPDF - PDF Document Processing"""
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class PyStreamPDFMCPTools:
     """12 MCP tools for PDF extraction, parsing, OCR, analysis"""
 
     @staticmethod
-    def get_tools() -> Dict[str, Any]:
+    def get_tools() -> dict[str, Any]:
         return {
             "extract_text": {
                 "name": "extract_text",
@@ -165,7 +165,7 @@ _AUTHOR_YEAR_CITATION_RE = re.compile(
 )
 
 
-def _parse_page_range(pages: str, page_count: int) -> List[int]:
+def _parse_page_range(pages: str, page_count: int) -> list[int]:
     """Parse '1-5' / '3' / 'all' into a 1-indexed page list, clamped to
     [1, page_count]. Malformed input falls back to 'all' rather than
     raising, since these tools take best-effort input from an MCP client."""
@@ -217,7 +217,7 @@ class PyStreamPDFMCPHandler:
         return pystreampdf.open(pdf_path)
 
     async def extract_text(self, pdf_path: str, pages: str = "all",
-                          preserve_layout: bool = False) -> Dict[str, Any]:
+                          preserve_layout: bool = False) -> dict[str, Any]:
         doc = self._open(pdf_path)
         page_numbers = _parse_page_range(pages, doc.page_count)
 
@@ -233,24 +233,25 @@ class PyStreamPDFMCPHandler:
         }
 
     async def extract_tables(self, pdf_path: str, pages: str = "all",
-                            output_format: str = "json") -> Dict[str, Any]:
+                            output_format: str = "json") -> dict[str, Any]:
         doc = self._open(pdf_path)
         page_numbers = _parse_page_range(pages, doc.page_count)
 
-        tables = []
-        for p in page_numbers:
-            for region in doc.page(p).regions:
-                if region.region_type == "table":
-                    tables.append({
-                        "page": p,
-                        "text": region.text,
-                        "bounds": {
-                            "x": region.bounds.x,
-                            "y": region.bounds.y,
-                            "width": region.bounds.width,
-                            "height": region.bounds.height,
-                        },
-                    })
+        tables = [
+            {
+                "page": p,
+                "text": region.text,
+                "bounds": {
+                    "x": region.bounds.x,
+                    "y": region.bounds.y,
+                    "width": region.bounds.width,
+                    "height": region.bounds.height,
+                },
+            }
+            for p in page_numbers
+            for region in doc.page(p).regions
+            if region.region_type == "table"
+        ]
 
         return {
             "pdf_path": pdf_path,
@@ -260,23 +261,24 @@ class PyStreamPDFMCPHandler:
         }
 
     async def extract_images(self, pdf_path: str, pages: str = "all",
-                            image_format: str = "png") -> Dict[str, Any]:
+                            image_format: str = "png") -> dict[str, Any]:
         doc = self._open(pdf_path)
         page_numbers = _parse_page_range(pages, doc.page_count)
 
-        images = []
-        for p in page_numbers:
-            for region in doc.page(p).regions:
-                if region.region_type == "image":
-                    images.append({
-                        "page": p,
-                        "bounds": {
-                            "x": region.bounds.x,
-                            "y": region.bounds.y,
-                            "width": region.bounds.width,
-                            "height": region.bounds.height,
-                        },
-                    })
+        images = [
+            {
+                "page": p,
+                "bounds": {
+                    "x": region.bounds.x,
+                    "y": region.bounds.y,
+                    "width": region.bounds.width,
+                    "height": region.bounds.height,
+                },
+            }
+            for p in page_numbers
+            for region in doc.page(p).regions
+            if region.region_type == "image"
+        ]
 
         return {
             "pdf_path": pdf_path,
@@ -286,7 +288,7 @@ class PyStreamPDFMCPHandler:
         }
 
     async def apply_ocr(self, pdf_path: str, pages: str = "all",
-                       language: str = "en") -> Dict[str, Any]:
+                       language: str = "en") -> dict[str, Any]:
         from .ocr.manager import OcrManager
         from .ocr.pipeline import OcrPipeline
 
@@ -331,11 +333,11 @@ class PyStreamPDFMCPHandler:
             ],
         }
 
-    async def detect_document_structure(self, pdf_path: str) -> Dict[str, Any]:
+    async def detect_document_structure(self, pdf_path: str) -> dict[str, Any]:
         doc = self._open(pdf_path)
         structure = doc.structure
 
-        def heading_to_dict(h) -> Dict[str, Any]:
+        def heading_to_dict(h) -> dict[str, Any]:
             return {
                 "level": h.level,
                 "text": h.text,
@@ -345,7 +347,7 @@ class PyStreamPDFMCPHandler:
 
         headings = [heading_to_dict(h) for h in structure.headings]
 
-        def count_headings(nodes: List[Dict[str, Any]]) -> int:
+        def count_headings(nodes: list[dict[str, Any]]) -> int:
             return sum(1 + count_headings(n["children"]) for n in nodes)
 
         return {
@@ -357,7 +359,7 @@ class PyStreamPDFMCPHandler:
             },
         }
 
-    async def extract_metadata(self, pdf_path: str) -> Dict[str, Any]:
+    async def extract_metadata(self, pdf_path: str) -> dict[str, Any]:
         doc = self._open(pdf_path)
         meta = doc.metadata
 
@@ -372,11 +374,11 @@ class PyStreamPDFMCPHandler:
             "modified": meta.get("modified"),
         }
 
-    async def detect_forms(self, pdf_path: str) -> Dict[str, Any]:
+    async def detect_forms(self, pdf_path: str) -> dict[str, Any]:
         doc = self._open(pdf_path)
         fields = doc.form_fields()
 
-        field_types: Dict[str, int] = {}
+        field_types: dict[str, int] = {}
         for f in fields:
             field_types[f.field_type] = field_types.get(f.field_type, 0) + 1
 
@@ -388,7 +390,7 @@ class PyStreamPDFMCPHandler:
         }
 
     async def chunk_document(self, pdf_path: str, chunk_strategy: str = "semantic",
-                            chunk_size: int = 1000) -> Dict[str, Any]:
+                            chunk_size: int = 1000) -> dict[str, Any]:
         from .extraction import ElementType, SemanticChunker
 
         doc = self._open(pdf_path)
@@ -415,7 +417,7 @@ class PyStreamPDFMCPHandler:
             "avg_chunk_size": avg_size,
         }
 
-    async def extract_citations(self, pdf_path: str) -> Dict[str, Any]:
+    async def extract_citations(self, pdf_path: str) -> dict[str, Any]:
         """Regex-based citation detection (numbered `[1]` and author-year
         `(Smith, 2020)` styles). This is a real, working heuristic, not a
         full bibliographic parser -- it won't catch every citation style,
@@ -428,7 +430,7 @@ class PyStreamPDFMCPHandler:
         author_year = _AUTHOR_YEAR_CITATION_RE.findall(full_text)
         all_citations = numbered + author_year
 
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         for c in all_citations:
             counts[c] = counts.get(c, 0) + 1
 
@@ -440,14 +442,14 @@ class PyStreamPDFMCPHandler:
             ],
         }
 
-    async def detect_language(self, pdf_path: str) -> Dict[str, Any]:
+    async def detect_language(self, pdf_path: str) -> dict[str, Any]:
         return {
             "status": "not_implemented",
             "pdf_path": pdf_path,
             "message": "No language-detection library is a dependency of this package.",
         }
 
-    async def validate_pdf(self, pdf_path: str) -> Dict[str, Any]:
+    async def validate_pdf(self, pdf_path: str) -> dict[str, Any]:
         from .validation.text import TextValidator
 
         try:
@@ -460,8 +462,8 @@ class PyStreamPDFMCPHandler:
                 "warnings": [],
             }
 
-        errors: List[str] = []
-        warnings: List[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
 
         try:
             page_count = doc.page_count
@@ -504,7 +506,7 @@ class PyStreamPDFMCPHandler:
         }
 
     async def export_processed_document(self, pdf_path: str,
-                                       output_format: str) -> Dict[str, Any]:
+                                       output_format: str) -> dict[str, Any]:
         output_format = output_format.lower()
 
         if output_format not in ("markdown", "json"):

@@ -27,14 +27,14 @@ from .types import (
 )
 
 __all__ = [
-    "TextValidator",
-    "TableValidator",
-    "LayoutValidator",
     "ConfidenceScorer",
-    "ValidationIssue",
-    "ValidationResult",
-    "TableValidationResult",
+    "LayoutValidator",
     "OcrTable",
     "PageConfidenceScore",
     "Recommendation",
+    "TableValidationResult",
+    "TableValidator",
+    "TextValidator",
+    "ValidationIssue",
+    "ValidationResult",
 ]

@@ -4,11 +4,10 @@ Verify claims against source documents to prevent hallucinations
 and provide grounding/evidence for AI-generated content.
 """
 
-from typing import List, Optional, Dict, Tuple, Set
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-import re
-from collections import Counter
+from typing import Optional
 
 
 class VerificationStatus(str, Enum):
@@ -36,10 +35,10 @@ class VerificationResult:
     status: VerificationStatus
     confidence: float  # 0-1, overall confidence
     grounded: bool  # Is claim grounded in sources?
-    evidence: List[Evidence] = field(default_factory=list)
-    supporting_facts: List[str] = field(default_factory=list)  # Key pieces of evidence
-    refuting_facts: List[str] = field(default_factory=list)  # Contradictions
-    sources: List[int] = field(default_factory=list)  # Source IDs (chunk numbers)
+    evidence: list[Evidence] = field(default_factory=list)
+    supporting_facts: list[str] = field(default_factory=list)  # Key pieces of evidence
+    refuting_facts: list[str] = field(default_factory=list)  # Contradictions
+    sources: list[int] = field(default_factory=list)  # Source IDs (chunk numbers)
 
 
 class FactVerifier:
@@ -49,14 +48,14 @@ class FactVerifier:
     prevents LLM hallucinations by verifying outputs.
     """
 
-    def __init__(self, source_chunks: Optional[List[Tuple[str, int]]] = None):
+    def __init__(self, source_chunks: Optional[list[tuple[str, int]]] = None):
         """Initialize verifier.
 
         Args:
             source_chunks: List of (text, source_id) tuples
         """
         self.sources = source_chunks or []
-        self.claim_cache: Dict[str, VerificationResult] = {}
+        self.claim_cache: dict[str, VerificationResult] = {}
 
     def verify(self, claim: str) -> VerificationResult:
         """Verify a claim against source documents.
@@ -94,7 +93,7 @@ class FactVerifier:
 
         return result
 
-    def verify_batch(self, claims: List[str]) -> List[VerificationResult]:
+    def verify_batch(self, claims: list[str]) -> list[VerificationResult]:
         """Verify multiple claims.
 
         Args:
@@ -105,7 +104,7 @@ class FactVerifier:
         """
         return [self.verify(claim) for claim in claims]
 
-    def get_evidence_for_term(self, term: str, top_k: int = 5) -> List[Evidence]:
+    def get_evidence_for_term(self, term: str, top_k: int = 5) -> list[Evidence]:
         """Get evidence for a specific term.
 
         Args:
@@ -150,7 +149,7 @@ class FactVerifier:
             or result.confidence < threshold
         )
 
-    def _extract_key_terms(self, claim: str) -> List[str]:
+    def _extract_key_terms(self, claim: str) -> list[str]:
         """Extract key terms from claim for searching.
 
         Args:
@@ -174,7 +173,7 @@ class FactVerifier:
         # Return top terms (by frequency in claim)
         return sorted(set(terms), key=lambda t: -len(t))[:10]
 
-    def _find_evidence(self, claim: str, key_terms: List[str]) -> List[Evidence]:
+    def _find_evidence(self, claim: str, key_terms: list[str]) -> list[Evidence]:
         """Find evidence for a claim in source documents.
 
         Args:
@@ -256,7 +255,7 @@ class FactVerifier:
 
         return relevance
 
-    def _analyze_evidence(self, claim: str, evidence_list: List[Evidence]) -> VerificationResult:
+    def _analyze_evidence(self, claim: str, evidence_list: list[Evidence]) -> VerificationResult:
         """Analyze evidence to determine claim status.
 
         Args:
@@ -297,7 +296,7 @@ class FactVerifier:
         refuting = [e.text for e in evidence_list if e.support_level < 0.4]
 
         # Source IDs
-        source_ids = sorted(set(e.source_id for e in evidence_list if e.source_id is not None))
+        source_ids = sorted({e.source_id for e in evidence_list if e.source_id is not None})
 
         return VerificationResult(
             claim=claim,
@@ -310,7 +309,7 @@ class FactVerifier:
             sources=source_ids,
         )
 
-    def generate_verification_report(self, claims: List[str]) -> Dict:
+    def generate_verification_report(self, claims: list[str]) -> dict:
         """Generate comprehensive verification report for multiple claims.
 
         Args:

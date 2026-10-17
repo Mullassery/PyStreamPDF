@@ -5,7 +5,7 @@ Shared data structures for all technical content analyzers (YAML, JSON, Code, Lo
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 
 @dataclass
@@ -23,10 +23,10 @@ class IntelligenceResult:
     content_type: str  # "yaml", "json", "python", "shell", "syslog", etc.
     is_valid: bool
     confidence: float  # 0.0-1.0
-    issues: List[str] = field(default_factory=list)
-    corrections: List[CorrectionSuggestion] = field(default_factory=list)
+    issues: list[str] = field(default_factory=list)
+    corrections: list[CorrectionSuggestion] = field(default_factory=list)
     corrected_text: Optional[str] = None
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if not 0.0 <= self.confidence <= 1.0:

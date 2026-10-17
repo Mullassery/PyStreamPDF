@@ -4,9 +4,9 @@ Construct and query knowledge graphs from extracted entities and relationships.
 Supports in-memory storage with BFS/DFS traversal and graph analytics.
 """
 
-from typing import List, Dict, Optional, Set, Tuple
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from collections import deque, defaultdict
+from typing import Optional
 
 
 @dataclass
@@ -15,7 +15,7 @@ class GraphNode:
     id: str
     label: str
     node_type: str  # person, organization, method, concept, etc.
-    properties: Dict = field(default_factory=dict)
+    properties: dict = field(default_factory=dict)
     frequency: int = 1  # How many times referenced
     in_degree: int = 0  # Number of incoming edges
     out_degree: int = 0  # Number of outgoing edges
@@ -29,7 +29,7 @@ class GraphEdge:
     relation_type: str
     confidence: float = 1.0
     weight: float = 1.0  # For ranking (confidence-based)
-    properties: Dict = field(default_factory=dict)
+    properties: dict = field(default_factory=dict)
 
 
 class KnowledgeGraph:
@@ -46,10 +46,10 @@ class KnowledgeGraph:
 
     def __init__(self):
         """Initialize knowledge graph."""
-        self.nodes: Dict[str, GraphNode] = {}
-        self.edges: Dict[Tuple[str, str], GraphEdge] = {}  # (source, target) -> edge
-        self.adjacency: Dict[str, List[Tuple[str, GraphEdge]]] = defaultdict(list)  # source -> [(target, edge)]
-        self.reverse_adjacency: Dict[str, List[Tuple[str, GraphEdge]]] = defaultdict(list)  # target -> [(source, edge)]
+        self.nodes: dict[str, GraphNode] = {}
+        self.edges: dict[tuple[str, str], GraphEdge] = {}  # (source, target) -> edge
+        self.adjacency: dict[str, list[tuple[str, GraphEdge]]] = defaultdict(list)  # source -> [(target, edge)]
+        self.reverse_adjacency: dict[str, list[tuple[str, GraphEdge]]] = defaultdict(list)  # target -> [(source, edge)]
 
     def add_node(self, node_id: str, label: str, node_type: str, **properties) -> GraphNode:
         """Add node to graph.
@@ -134,7 +134,7 @@ class KnowledgeGraph:
 
         return edge
 
-    def query(self, node_id: str, depth: int = 1) -> Dict[str, List[Tuple[str, float]]]:
+    def query(self, node_id: str, depth: int = 1) -> dict[str, list[tuple[str, float]]]:
         """Query neighbors of a node up to specified depth.
 
         Args:
@@ -168,7 +168,7 @@ class KnowledgeGraph:
 
         return dict(results)
 
-    def find_path(self, source: str, target: str) -> Optional[List[str]]:
+    def find_path(self, source: str, target: str) -> Optional[list[str]]:
         """Find shortest path between two nodes using BFS.
 
         Args:
@@ -195,15 +195,15 @@ class KnowledgeGraph:
 
             for neighbor, _ in self.adjacency[current]:
                 if neighbor == target:
-                    return path + [neighbor]
+                    return [*path, neighbor]
 
                 if neighbor not in visited:
                     visited.add(neighbor)
-                    queue.append((neighbor, path + [neighbor]))
+                    queue.append((neighbor, [*path, neighbor]))
 
         return None
 
-    def find_similar(self, node_id: str, top_k: int = 10) -> List[Tuple[str, float]]:
+    def find_similar(self, node_id: str, top_k: int = 10) -> list[tuple[str, float]]:
         """Find most similar/related nodes using shared neighbors.
 
         Args:
@@ -219,7 +219,7 @@ class KnowledgeGraph:
             return []
 
         # Get neighbors of reference node
-        ref_neighbors = set(neighbor for neighbor, _ in self.adjacency[node_id])
+        ref_neighbors = {neighbor for neighbor, _ in self.adjacency[node_id]}
 
         # Calculate similarity to other nodes
         similarities = []
@@ -227,7 +227,7 @@ class KnowledgeGraph:
             if other_id == node_id:
                 continue
 
-            other_neighbors = set(neighbor for neighbor, _ in self.adjacency[other_id])
+            other_neighbors = {neighbor for neighbor, _ in self.adjacency[other_id]}
 
             # Jaccard similarity: intersection / union
             if len(ref_neighbors | other_neighbors) == 0:
@@ -243,7 +243,7 @@ class KnowledgeGraph:
         # Return top K sorted by similarity
         return sorted(similarities, key=lambda x: -x[1])[:top_k]
 
-    def calculate_influence(self) -> Dict[str, float]:
+    def calculate_influence(self) -> dict[str, float]:
         """Calculate influence score for each node (PageRank-like).
 
         Returns:
@@ -270,7 +270,7 @@ class KnowledgeGraph:
 
         return scores
 
-    def get_node_stats(self, node_id: str) -> Dict:
+    def get_node_stats(self, node_id: str) -> dict:
         """Get detailed statistics for a node.
 
         Args:
@@ -298,7 +298,7 @@ class KnowledgeGraph:
             "neighbors": len(self.adjacency[node_id]),
         }
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Export graph as dictionary.
 
         Returns:
@@ -325,7 +325,7 @@ class KnowledgeGraph:
             ],
         }
 
-    def get_subgraph(self, nodes: List[str]) -> "KnowledgeGraph":
+    def get_subgraph(self, nodes: list[str]) -> "KnowledgeGraph":
         """Extract subgraph containing specified nodes and their relationships.
 
         Args:

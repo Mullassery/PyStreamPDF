@@ -4,7 +4,7 @@ Document layout validation for heading structure.
 Detects heading hierarchy issues, empty headings, and structural problems.
 """
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from .types import ValidationIssue, ValidationResult
 
@@ -14,9 +14,8 @@ class LayoutValidator:
 
     def __init__(self):
         """Initialize layout validator."""
-        pass
 
-    def validate(self, headings: List[Tuple[str, int]]) -> ValidationResult:
+    def validate(self, headings: list[tuple[str, int]]) -> ValidationResult:
         """
         Validate heading structure.
 
@@ -45,7 +44,7 @@ class LayoutValidator:
         status = "valid" if not issues else "issues"
         return ValidationResult(status=status, confidence=confidence, issues=issues)
 
-    def _check_hierarchy(self, headings: List[Tuple[str, int]]) -> List[ValidationIssue]:
+    def _check_hierarchy(self, headings: list[tuple[str, int]]) -> list[ValidationIssue]:
         """Check heading level progression (no skips when going deeper like H1 → H3)."""
         issues = []
 
@@ -71,7 +70,7 @@ class LayoutValidator:
 
         return issues
 
-    def _check_empty_headings(self, headings: List[Tuple[str, int]]) -> List[ValidationIssue]:
+    def _check_empty_headings(self, headings: list[tuple[str, int]]) -> list[ValidationIssue]:
         """Flag any empty or whitespace-only heading."""
         issues = []
 
@@ -87,7 +86,7 @@ class LayoutValidator:
 
         return issues
 
-    def _check_duplicate_h1s(self, headings: List[Tuple[str, int]]) -> Optional[ValidationIssue]:
+    def _check_duplicate_h1s(self, headings: list[tuple[str, int]]) -> Optional[ValidationIssue]:
         """Check for H1s interspersed with lower-level headings (improper structure)."""
         h1_indices = [i for i, (_, level) in enumerate(headings) if level == 1]
 

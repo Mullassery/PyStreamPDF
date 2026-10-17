@@ -10,35 +10,35 @@ Phases:
 - Phase 5e: RAG optimization (token budgets, retrieval ranking)
 """
 
-from .builder import DocumentGraph, GraphNode, GraphEdge, NodeType, EdgeType
-from .relationships import RelationshipExtractor, RelationType
-from .recovery import StructureRecoveryEngine, DocumentMetadata, SectionHierarchy
+from .builder import DocumentGraph, EdgeType, GraphEdge, GraphNode, NodeType
 from .exporters import (
     GraphExporter,
-    MarkdownExporter,
     JSONLDExporter,
+    MarkdownExporter,
     RAGOptimizedExporter,
     SimpleJSONExporter,
 )
+from .recovery import DocumentMetadata, SectionHierarchy, StructureRecoveryEngine
+from .relationships import RelationshipExtractor, RelationType
 
 __all__ = [
     # Graph structure
     "DocumentGraph",
-    "GraphNode",
-    "GraphEdge",
-    "NodeType",
-    "EdgeType",
-    # Relationship extraction
-    "RelationshipExtractor",
-    "RelationType",
-    # Structure recovery
-    "StructureRecoveryEngine",
     "DocumentMetadata",
-    "SectionHierarchy",
+    "EdgeType",
+    "GraphEdge",
     # Exporters
     "GraphExporter",
-    "MarkdownExporter",
+    "GraphNode",
     "JSONLDExporter",
+    "MarkdownExporter",
+    "NodeType",
     "RAGOptimizedExporter",
+    "RelationType",
+    # Relationship extraction
+    "RelationshipExtractor",
+    "SectionHierarchy",
     "SimpleJSONExporter",
+    # Structure recovery
+    "StructureRecoveryEngine",
 ]

@@ -4,8 +4,6 @@ Text quality validation for OCR output.
 Detects truncation, repetition, character corruption, and broken line sequences.
 """
 
-import re
-from typing import List
 
 from .types import ValidationIssue, ValidationResult
 
@@ -103,11 +101,8 @@ class TextValidator:
         # 1. Ends without punctuation
         # 2. Contains at least one complete word
         words = last_line.split()
-        if len(words) > 0 and len(words[-1]) > 2:
-            # Looks like an incomplete sentence (no ending punctuation)
-            return True
-
-        return False
+        # Incomplete sentence: at least one word and no ending punctuation.
+        return len(words) > 0 and len(words[-1]) > 2
 
     def _has_repetition(self, text: str) -> bool:
         """Detect repeated words or phrases (OCR corruption pattern)."""
@@ -124,28 +119,18 @@ class TextValidator:
                 word_freq[word_lower] = word_freq.get(word_lower, 0) + 1
 
         # If any word appears more than 3 times in relatively short text, it's likely repetition
-        for word, count in word_freq.items():
-            if count >= 4:  # 4+ occurrences = repetition
-                return True
+        return any(count >= 4 for word, count in word_freq.items())
 
-        return False
-
-    def _find_corrupted_chars(self, text: str) -> List[str]:
+    def _find_corrupted_chars(self, text: str) -> list[str]:
         """Find corrupted/control characters in text."""
-        corrupted = []
-
-        for char in text:
-            # Check for replacement character (U+FFFD)
-            if char == '�':
-                corrupted.append(char)
-            # Check for control characters (except common ones like \n, \r, \t)
-            elif ord(char) < 0x20 and char not in '\n\r\t':
-                corrupted.append(char)
-            # Check for other suspicious Unicode ranges
-            elif ord(char) in range(0x7F, 0x9F):
-                corrupted.append(char)
-
-        return corrupted
+        # Replacement character (U+FFFD), control chars, or C1 range.
+        return [
+            char
+            for char in text
+            if char == '�'
+            or (ord(char) < 0x20 and char not in '\n\r\t')
+            or ord(char) in range(0x7F, 0x9F)
+        ]
 
     def _has_broken_sequence(self, text: str) -> bool:
         """Detect broken line sequences or OCR artifacts."""
@@ -161,11 +146,15 @@ class TextValidator:
 
             # Check if line starts with lowercase after newline
             # (suggests line break in middle of word)
-            if line[0].islower() and len(line) > 1:
-                # Allow if it's a proper lowercase start (e.g., "eBay")
-                if len(lines) > 1 and lines.index(line) > 0:
-                    prev_line = lines[lines.index(line) - 1].strip()
-                    if prev_line and prev_line[-1].isalpha():
-                        return True  # Likely word split across lines
+            # Allow if it's a proper lowercase start (e.g., "eBay")
+            if (
+                line[0].islower()
+                and len(line) > 1
+                and len(lines) > 1
+                and lines.index(line) > 0
+            ):
+                prev_line = lines[lines.index(line) - 1].strip()
+                if prev_line and prev_line[-1].isalpha():
+                    return True  # Likely word split across lines
 
         return False

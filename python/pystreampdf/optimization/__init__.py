@@ -8,31 +8,31 @@ Transforms structured documents into retrieval-ready chunks with:
 - Token budgeting (adaptive allocation per chunk type)
 """
 
-from .selector import (
-    SelectiveIntelligence,
-    ContentSelector,
-    ContentDetail,
-    SelectionPolicy,
-)
+from .chunking import ChunkingEngine, ChunkingStrategy, RAGChunk
 from .compressor import AdaptiveCompressor, CompressionStrategy
-from .chunking import ChunkingStrategy, RAGChunk, ChunkingEngine
-from .metadata import RetrievalMetadata, MetadataInjector, ChunkDensity
+from .metadata import ChunkDensity, MetadataInjector, RetrievalMetadata
+from .selector import (
+    ContentDetail,
+    ContentSelector,
+    SelectionPolicy,
+    SelectiveIntelligence,
+)
 
 __all__ = [
-    # Selective Intelligence
-    "SelectiveIntelligence",
-    "ContentSelector",
-    "ContentDetail",
-    "SelectionPolicy",
     # Compression
     "AdaptiveCompressor",
-    "CompressionStrategy",
+    "ChunkDensity",
+    "ChunkingEngine",
     # Chunking
     "ChunkingStrategy",
+    "CompressionStrategy",
+    "ContentDetail",
+    "ContentSelector",
+    "MetadataInjector",
     "RAGChunk",
-    "ChunkingEngine",
     # Metadata
     "RetrievalMetadata",
-    "MetadataInjector",
-    "ChunkDensity",
+    "SelectionPolicy",
+    # Selective Intelligence
+    "SelectiveIntelligence",
 ]

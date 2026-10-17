@@ -1,13 +1,13 @@
 """Unified analysis pipeline connecting OCR → Validation → Intelligence → Structure."""
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from enum import Enum
 import time
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Optional
 
+from .intelligence.types import IntelligenceResult
 from .ocr.provider import OcrResult
 from .validation.types import ValidationResult
-from .intelligence.types import IntelligenceResult
 
 
 class AnalysisStage(Enum):
@@ -59,15 +59,15 @@ class UnifiedAnalysisResult:
     intelligence_confidence: float = 0.0  # From IntelligenceResult
 
     # Error tracking
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     fallback_used: bool = False  # Did we fall back to raw content?
 
     # Metrics
-    metrics: List[AnalysisMetrics] = field(default_factory=list)
+    metrics: list[AnalysisMetrics] = field(default_factory=list)
 
     # Structure (for Phase 5d)
-    structure_nodes: List[Dict[str, Any]] = field(default_factory=list)
-    structure_edges: List[tuple] = field(default_factory=list)
+    structure_nodes: list[dict[str, Any]] = field(default_factory=list)
+    structure_edges: list[tuple] = field(default_factory=list)
 
     def compute_confidence(self) -> float:
         """
@@ -133,7 +133,7 @@ class UnifiedAnalysisResult:
             return None
         return max(self.metrics, key=lambda m: m.duration_ms)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "content_type": self.content_type,
@@ -170,7 +170,7 @@ class AnalysisPipeline:
     """
 
     def __init__(self):
-        self.results_cache: Dict[str, UnifiedAnalysisResult] = {}
+        self.results_cache: dict[str, UnifiedAnalysisResult] = {}
 
     def analyze(
         self,
@@ -230,11 +230,11 @@ class AnalysisPipeline:
         Tries multiple analyzers and picks the best match.
         """
         from .intelligence import (
-            YAMLAnalyzer,
-            JSONAnalyzer,
             CodeAnalyzer,
+            JSONAnalyzer,
             LogAnalyzer,
             SQLAnalyzer,
+            YAMLAnalyzer,
         )
 
         analyzers = [
@@ -263,8 +263,8 @@ class AnalysisPipeline:
                     best_result = intel_result
                     best_name = name
 
-            except Exception as e:
-                result.add_error(AnalysisStage.INTELLIGENCE, f"{name}: {str(e)}")
+            except Exception as e:  # noqa: PERF203
+                result.add_error(AnalysisStage.INTELLIGENCE, f"{name}: {e!s}")
 
         if best_result:
             result.intelligence_result = best_result
@@ -290,8 +290,7 @@ class AnalysisPipeline:
         if result.errors:
             lines.append("")
             lines.append("Errors encountered:")
-            for error in result.errors:
-                lines.append(f"  • {error}")
+            lines.extend(f"  • {error}" for error in result.errors)
 
         if result.metrics:
             lines.append("")

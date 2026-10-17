@@ -6,7 +6,7 @@ Uses PaddleOCR for multi-language text extraction.
 
 import logging
 import time
-from typing import List, Optional
+from typing import Optional
 
 from ..provider import OcrCapabilities, OcrProvider, OcrResult, TextRegion
 
@@ -18,7 +18,7 @@ class PaddleProvider(OcrProvider):
 
     def __init__(
         self,
-        languages: Optional[List[str]] = None,
+        languages: Optional[list[str]] = None,
         use_gpu: bool = False
     ):
         """
@@ -98,6 +98,7 @@ class PaddleProvider(OcrProvider):
         """
         try:
             import io
+
             from PIL import Image
         except ImportError as e:
             raise ImportError(

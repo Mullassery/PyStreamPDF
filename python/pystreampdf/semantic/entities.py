@@ -4,10 +4,10 @@ Extract named entities (people, organizations, concepts) from PDF text
 and classify them by type with confidence scores.
 """
 
-from typing import List, Dict, Optional, Tuple
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-import re
+from typing import Optional
 
 
 class EntityType(str, Enum):
@@ -33,7 +33,7 @@ class Entity:
     context: Optional[str] = None  # Surrounding text for context
     page: Optional[int] = None
     frequency: int = 1  # How many times appears in document
-    aliases: List[str] = field(default_factory=list)  # Alternative names
+    aliases: list[str] = field(default_factory=list)  # Alternative names
 
 
 class ConceptExtractor:
@@ -54,7 +54,7 @@ class ConceptExtractor:
             min_confidence: Minimum confidence threshold (0-1)
         """
         self.min_confidence = min_confidence
-        self.entities: Dict[str, Entity] = {}
+        self.entities: dict[str, Entity] = {}
 
         # Pattern definitions
         self.patterns = {
@@ -88,7 +88,7 @@ class ConceptExtractor:
             "bleu", "rouge", "perplexity", "latency", "throughput"
         ]
 
-    def extract(self, text: str, page: Optional[int] = None) -> List[Entity]:
+    def extract(self, text: str, page: Optional[int] = None) -> list[Entity]:
         """Extract entities from text.
 
         Args:
@@ -134,7 +134,7 @@ class ConceptExtractor:
 
         return extracted
 
-    def _extract_dates(self, text: str, page: Optional[int] = None) -> List[Entity]:
+    def _extract_dates(self, text: str, page: Optional[int] = None) -> list[Entity]:
         """Extract date references."""
         dates = []
         matches = re.finditer(self.patterns["date"], text)
@@ -150,7 +150,7 @@ class ConceptExtractor:
             dates.append(entity)
         return dates
 
-    def _extract_metrics(self, text: str, page: Optional[int] = None) -> List[Entity]:
+    def _extract_metrics(self, text: str, page: Optional[int] = None) -> list[Entity]:
         """Extract performance metrics and measurements."""
         metrics = []
         for keyword in self.metric_keywords:
@@ -170,7 +170,7 @@ class ConceptExtractor:
                     metrics.append(entity)
         return metrics
 
-    def _extract_people(self, text: str, page: Optional[int] = None) -> List[Entity]:
+    def _extract_people(self, text: str, page: Optional[int] = None) -> list[Entity]:
         """Extract person names using pattern matching."""
         people = []
         matches = re.finditer(self.patterns["person"], text)
@@ -188,7 +188,7 @@ class ConceptExtractor:
                 people.append(entity)
         return people
 
-    def _extract_organizations(self, text: str, page: Optional[int] = None) -> List[Entity]:
+    def _extract_organizations(self, text: str, page: Optional[int] = None) -> list[Entity]:
         """Extract organization names."""
         orgs = []
 
@@ -224,9 +224,9 @@ class ConceptExtractor:
         end = min(len(text), idx + len(entity_name) + window)
         return text[start:end].strip()
 
-    def _deduplicate(self, entities: List[Entity]) -> List[Entity]:
+    def _deduplicate(self, entities: list[Entity]) -> list[Entity]:
         """Remove duplicate entities, keeping highest confidence."""
-        seen: Dict[str, Entity] = {}
+        seen: dict[str, Entity] = {}
         for entity in sorted(entities, key=lambda e: -e.confidence):
             key = entity.name.lower()
             if key not in seen:
@@ -239,7 +239,7 @@ class ConceptExtractor:
 
         return list(seen.values())
 
-    def batch_extract(self, texts: List[Tuple[str, Optional[int]]]) -> List[Entity]:
+    def batch_extract(self, texts: list[tuple[str, Optional[int]]]) -> list[Entity]:
         """Extract entities from multiple texts.
 
         Args:
@@ -256,7 +256,7 @@ class ConceptExtractor:
         # Final deduplication across all texts
         return self._deduplicate(all_entities)
 
-    def get_entities_by_type(self, entities: List[Entity], entity_type: EntityType) -> List[Entity]:
+    def get_entities_by_type(self, entities: list[Entity], entity_type: EntityType) -> list[Entity]:
         """Filter entities by type.
 
         Args:
@@ -268,7 +268,7 @@ class ConceptExtractor:
         """
         return [e for e in entities if e.type == entity_type]
 
-    def get_top_entities(self, entities: List[Entity], limit: int = 10) -> List[Entity]:
+    def get_top_entities(self, entities: list[Entity], limit: int = 10) -> list[Entity]:
         """Get top entities by frequency.
 
         Args:

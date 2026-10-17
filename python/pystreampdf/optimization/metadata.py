@@ -1,8 +1,8 @@
 """Retrieval Metadata: Tags and scoring for RAG systems."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Optional
 
 from ..tokenizer import count_tokens
 
@@ -42,16 +42,16 @@ class RetrievalMetadata:
     language: Optional[str] = None  # For code: "python", "sql"; for docs: "en"
 
     # Relationships
-    related_chunk_ids: List[str] = field(default_factory=list)
-    depends_on: List[str] = field(default_factory=list)  # Prerequisite chunks
-    referenced_by: List[str] = field(default_factory=list)  # Chunks that cite this
+    related_chunk_ids: list[str] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)  # Prerequisite chunks
+    referenced_by: list[str] = field(default_factory=list)  # Chunks that cite this
 
     # Filtering metadata
-    tags: List[str] = field(default_factory=list)  # For semantic filtering
+    tags: list[str] = field(default_factory=list)  # For semantic filtering
     validation_issues: int = 0  # Number of issues detected
     corrections_applied: int = 0  # OCR/analysis corrections made
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage/transmission."""
         return {
             "chunk_id": self.chunk_id,
@@ -84,12 +84,12 @@ class MetadataInjector:
             return ChunkDensity.LOW
 
         lines = content.strip().split("\n")
-        non_empty_lines = [l for l in lines if l.strip()]
+        non_empty_lines = [line for line in lines if line.strip()]
 
         if not non_empty_lines:
             return ChunkDensity.LOW
 
-        avg_line_length = sum(len(l) for l in non_empty_lines) / len(non_empty_lines)
+        avg_line_length = sum(len(line) for line in non_empty_lines) / len(non_empty_lines)
 
         # Heuristics:
         # - Long lines (code, structured): HIGH

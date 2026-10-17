@@ -9,9 +9,9 @@ Improved handling of:
 - Token estimation
 """
 
-from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Optional
 
 from .tokenizer import count_tokens
 
@@ -66,9 +66,9 @@ class TableStructure:
     """Extracted table with preserved structure."""
     rows: int
     cols: int
-    cells: List[TableCell]
-    headers: List[str]
-    bounding_box: Tuple[float, float, float, float]  # x1, y1, x2, y2
+    cells: list[TableCell]
+    headers: list[str]
+    bounding_box: tuple[float, float, float, float]  # x1, y1, x2, y2
     confidence: float  # 0-1 confidence in extraction
     caption: Optional[str] = None
 
@@ -90,7 +90,7 @@ class MultimediaElement:
 class SourceLocation:
     """Precise location of a piece of content in PDF."""
     page: int
-    bounding_box: Tuple[float, float, float, float]  # x1, y1, x2, y2
+    bounding_box: tuple[float, float, float, float]  # x1, y1, x2, y2
     text: str  # Exact source text
     offset_start: int  # Character offset in page
     offset_end: int
@@ -103,10 +103,10 @@ class ContentChunk:
     chunk_type: ElementType
     page_start: int
     page_end: int
-    source_locations: List[SourceLocation] = field(default_factory=list)
+    source_locations: list[SourceLocation] = field(default_factory=list)
     heading_path: Optional[str] = None  # Breadcrumb: H1 > H2 > H3
-    tables: List[TableStructure] = field(default_factory=list)
-    images: List[MultimediaElement] = field(default_factory=list)
+    tables: list[TableStructure] = field(default_factory=list)
+    images: list[MultimediaElement] = field(default_factory=list)
     estimated_tokens: int = 0
     confidence: float = 1.0  # Extraction confidence
 
@@ -119,7 +119,7 @@ class ReadingOrderCorrector:
         self.column_threshold = 50.0  # Points to distinguish columns
         self.line_threshold = 10.0  # Points to group into same line
 
-    def analyze_fragments(self, fragments: List[TextFragment]) -> ReadingOrder:
+    def analyze_fragments(self, fragments: list[TextFragment]) -> ReadingOrder:
         """Analyze text fragment layout.
 
         Args:
@@ -132,8 +132,8 @@ class ReadingOrderCorrector:
             return ReadingOrder.CORRECT
 
         # Extract Y coordinates (vertical positions)
-        y_coords = sorted(set(f.y for f in fragments))
-        x_coords = sorted(set(f.x for f in fragments))
+        sorted({f.y for f in fragments})
+        x_coords = sorted({f.x for f in fragments})
 
         # Detect multi-column layout
         if len(x_coords) > 2 and max(x_coords) - min(x_coords) > 200:
@@ -151,7 +151,7 @@ class ReadingOrderCorrector:
 
         return ReadingOrder.CORRECT
 
-    def correct_order(self, fragments: List[TextFragment]) -> List[TextFragment]:
+    def correct_order(self, fragments: list[TextFragment]) -> list[TextFragment]:
         """Reorder fragments to natural reading order.
 
         Args:
@@ -167,7 +167,7 @@ class ReadingOrderCorrector:
         sorted_fragments = sorted(fragments, key=lambda f: (round(f.y / self.line_threshold), f.x))
         return sorted_fragments
 
-    def merge_fragments(self, fragments: List[TextFragment]) -> str:
+    def merge_fragments(self, fragments: list[TextFragment]) -> str:
         """Merge corrected fragments into flowing text.
 
         Args:
@@ -207,7 +207,7 @@ class TableExtractor:
         """Initialize table extractor."""
         self.grid_threshold = 5.0  # Points to snap to grid
 
-    def detect_table_grid(self, elements: List[Dict[str, Any]]) -> Optional[Tuple[List[float], List[float]]]:
+    def detect_table_grid(self, elements: list[dict[str, Any]]) -> Optional[tuple[list[float], list[float]]]:
         """Detect table grid (rows and columns).
 
         Args:
@@ -237,7 +237,7 @@ class TableExtractor:
 
         return (col_x, row_y)
 
-    def _cluster_coordinates(self, coords: List[float]) -> List[float]:
+    def _cluster_coordinates(self, coords: list[float]) -> list[float]:
         """Cluster nearby coordinates.
 
         Args:
@@ -262,8 +262,8 @@ class TableExtractor:
 
     def extract_table(
         self,
-        grid: Tuple[List[float], List[float]],
-        text_elements: List[Dict[str, Any]],
+        grid: tuple[list[float], list[float]],
+        text_elements: list[dict[str, Any]],
     ) -> TableStructure:
         """Extract table from grid and text.
 
@@ -279,10 +279,11 @@ class TableExtractor:
         cols = len(col_x) - 1
 
         # Create empty cells
-        cells = []
-        for r in range(rows):
-            for c in range(cols):
-                cells.append(TableCell(content="", row=r, col=c))
+        cells = [
+            TableCell(content="", row=r, col=c)
+            for r in range(rows)
+            for c in range(cols)
+        ]
 
         # Assign text to cells
         for text_elem in text_elements:
@@ -333,7 +334,7 @@ class SemanticChunker:
         page_end: int,
         heading_path: Optional[str] = None,
         budget_override: Optional[int] = None,
-    ) -> List[ContentChunk]:
+    ) -> list[ContentChunk]:
         """Create semantic chunks from content.
 
         Args:
@@ -409,7 +410,7 @@ class MultimediaAnalyzer:
         """Initialize multimedia analyzer."""
         self.image_confidence_threshold = 0.7
 
-    def detect_images(self, page_elements: List[Dict[str, Any]]) -> List[MultimediaElement]:
+    def detect_images(self, page_elements: list[dict[str, Any]]) -> list[MultimediaElement]:
         """Detect images and charts in page.
 
         Args:
@@ -470,7 +471,7 @@ class CitationTracker:
 
     def __init__(self):
         """Initialize citation tracker."""
-        self.citations: Dict[str, List[SourceLocation]] = {}
+        self.citations: dict[str, list[SourceLocation]] = {}
 
     def add_citation(self, content: str, location: SourceLocation) -> None:
         """Register a citation.
@@ -497,7 +498,7 @@ class CitationTracker:
                 return locations[0]
         return None
 
-    def verify_hallucination(self, claim: str, chunks: List[ContentChunk]) -> bool:
+    def verify_hallucination(self, claim: str, chunks: list[ContentChunk]) -> bool:
         """Check if claim is grounded in source content.
 
         Args:
@@ -508,7 +509,4 @@ class CitationTracker:
             True if claim is grounded in content
         """
         claim_lower = claim.lower()
-        for chunk in chunks:
-            if claim_lower in chunk.content.lower():
-                return True
-        return False
+        return any(claim_lower in chunk.content.lower() for chunk in chunks)

@@ -1,45 +1,46 @@
 """PyStreamPDF CLI Dashboard - Document processing monitoring"""
 
-import sys
+import importlib.util
 import platform
-from datetime import datetime
-from typing import Optional, Dict, Any
+import sys
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Optional
 
 
 @dataclass
 class DashboardMetrics:
     timestamp: str
     title: str
-    metrics: Dict[str, Any]
+    metrics: dict[str, Any]
     alerts: list
     recommendations: list
+
+
+def _module_available(name: str) -> bool:
+    """Whether `name` can be imported, without importing it (F401 probe)."""
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
 
 
 def get_dashboard_impl(product_name: str):
     platform_name = platform.system()
     if platform_name == "Darwin":
-        try:
-            from rich.console import Console
+        if _module_available("rich"):
             return RichDashboard(product_name)
-        except ImportError:
-            return SimpleDashboard(product_name)
+        return SimpleDashboard(product_name)
     elif platform_name == "Linux":
-        try:
-            from textual.app import App
+        if _module_available("textual"):
             return TextualDashboard(product_name)
-        except ImportError:
-            try:
-                from rich.console import Console
-                return RichDashboard(product_name)
-            except ImportError:
-                return SimpleDashboard(product_name)
-    else:
-        try:
-            from rich.console import Console
+        if _module_available("rich"):
             return RichDashboard(product_name)
-        except ImportError:
-            return SimpleDashboard(product_name)
+        return SimpleDashboard(product_name)
+    else:
+        if _module_available("rich"):
+            return RichDashboard(product_name)
+        return SimpleDashboard(product_name)
 
 
 class SimpleDashboard:
@@ -115,12 +116,7 @@ class RichDashboard:
 class TextualDashboard:
     def __init__(self, product_name: str):
         self.product_name = product_name
-        self.has_textual = False
-        try:
-            from textual.app import App
-            self.has_textual = True
-        except ImportError:
-            pass
+        self.has_textual = _module_available("textual")
 
     def render(self, data: DashboardMetrics) -> None:
         if not self.has_textual:

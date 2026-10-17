@@ -1,7 +1,8 @@
 """PyStreamPDF CLI - Command-line interface"""
 
-import sys
 import argparse
+import sys
+
 from pystreampdf.cli_dashboard import PyStreamPDFDashboard
 
 

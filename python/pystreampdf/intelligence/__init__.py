@@ -18,11 +18,11 @@ from .types import CorrectionSuggestion, IntelligenceResult
 from .yaml_intelligence import YAMLAnalyzer
 
 __all__ = [
-    "YAMLAnalyzer",
-    "JSONAnalyzer",
     "CodeAnalyzer",
+    "CorrectionSuggestion",
+    "IntelligenceResult",
+    "JSONAnalyzer",
     "LogAnalyzer",
     "SQLAnalyzer",
-    "IntelligenceResult",
-    "CorrectionSuggestion",
+    "YAMLAnalyzer",
 ]

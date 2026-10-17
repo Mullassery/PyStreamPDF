@@ -1,21 +1,21 @@
 """Document structure recovery - reconstruct hierarchy and relationships from analyzed content."""
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
+from typing import Any, Optional
 
-from .builder import DocumentGraph, GraphNode, GraphEdge, NodeType, EdgeType
+from .builder import DocumentGraph, EdgeType, GraphEdge, GraphNode, NodeType
 
 
 @dataclass
 class DocumentMetadata:
     """Extracted document-level metadata."""
     title: Optional[str] = None
-    authors: List[str] = field(default_factory=list)
+    authors: list[str] = field(default_factory=list)
     date: Optional[str] = None
     language: Optional[str] = None
     page_count: Optional[int] = None
-    keywords: List[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -27,8 +27,8 @@ class SectionHierarchy:
     page_number: int
     node_id: str
     parent_id: Optional[str] = None
-    children_ids: List[str] = field(default_factory=list)
-    related_ids: List[str] = field(default_factory=list)  # Cross-references
+    children_ids: list[str] = field(default_factory=list)
+    related_ids: list[str] = field(default_factory=list)  # Cross-references
 
 
 class StructureRecoveryEngine:
@@ -103,7 +103,7 @@ class StructureRecoveryEngine:
 
         return graph
 
-    def _extract_sections(self, content: str) -> List[Dict[str, Any]]:
+    def _extract_sections(self, content: str) -> list[dict[str, Any]]:
         """Extract all section headers and their content."""
         sections = []
         lines = content.split("\n")
@@ -142,8 +142,8 @@ class StructureRecoveryEngine:
         return sections
 
     def _build_section_hierarchy(
-        self, sections: List[Dict[str, Any]], graph: DocumentGraph, confidence: float
-    ) -> Dict[int, SectionHierarchy]:
+        self, sections: list[dict[str, Any]], graph: DocumentGraph, confidence: float
+    ) -> dict[int, SectionHierarchy]:
         """Build proper hierarchy from flat section list."""
         hierarchy = {}
         stack = []  # Stack of (level, section_hierarchy)
@@ -198,12 +198,12 @@ class StructureRecoveryEngine:
 
         return hierarchy
 
-    def _detect_figures(self, content: str) -> List[Dict[str, str]]:
+    def _detect_figures(self, content: str) -> list[dict[str, str]]:
         """Detect figure references and captions."""
         figures = []
 
         for match in self.figure_pattern.finditer(content):
-            figure_text = match.group(0)
+            match.group(0)
             caption_match = self.caption_pattern.search(content, match.end())
 
             figures.append(
@@ -218,8 +218,8 @@ class StructureRecoveryEngine:
 
     def _link_figures_to_sections(
         self,
-        figures: List[Dict[str, str]],
-        sections: Dict[int, SectionHierarchy],
+        figures: list[dict[str, str]],
+        sections: dict[int, SectionHierarchy],
         graph: DocumentGraph,
         confidence: float,
     ) -> None:
@@ -265,24 +265,17 @@ class StructureRecoveryEngine:
                     graph.add_edge(edge)
                     break
 
-    def _detect_tables(self, content: str) -> List[Dict[str, str]]:
+    def _detect_tables(self, content: str) -> list[dict[str, str]]:
         """Detect table references."""
-        tables = []
-
-        for match in self.table_pattern.finditer(content):
-            tables.append(
-                {
-                    "reference": match.group(1),
-                    "position": match.start(),
-                }
-            )
-
-        return tables
+        return [
+            {"reference": match.group(1), "position": match.start()}
+            for match in self.table_pattern.finditer(content)
+        ]
 
     def _link_tables_to_sections(
         self,
-        tables: List[Dict[str, str]],
-        sections: Dict[int, SectionHierarchy],
+        tables: list[dict[str, str]],
+        sections: dict[int, SectionHierarchy],
         graph: DocumentGraph,
         confidence: float,
     ) -> None:
@@ -307,25 +300,23 @@ class StructureRecoveryEngine:
                     graph.add_edge(edge)
                     break
 
-    def _detect_appendices(self, content: str) -> List[Dict[str, str]]:
+    def _detect_appendices(self, content: str) -> list[dict[str, str]]:
         """Detect appendix sections."""
-        appendices = []
-
-        for match in self.appendix_pattern.finditer(content):
-            appendices.append(
-                {
-                    "letter": match.group(1),
-                    "title": match.group(2),
-                    "position": match.start(),
-                }
-            )
+        appendices = [
+            {
+                "letter": match.group(1),
+                "title": match.group(2),
+                "position": match.start(),
+            }
+            for match in self.appendix_pattern.finditer(content)
+        ]
 
         return appendices
 
     def _link_appendices(
         self,
-        appendices: List[Dict[str, str]],
-        sections: Dict[int, SectionHierarchy],
+        appendices: list[dict[str, str]],
+        sections: dict[int, SectionHierarchy],
         graph: DocumentGraph,
         confidence: float,
     ) -> None:
@@ -363,15 +354,15 @@ class StructureRecoveryEngine:
     def _extract_cross_references(
         self,
         content: str,
-        sections: Dict[int, SectionHierarchy],
+        sections: dict[int, SectionHierarchy],
         graph: DocumentGraph,
         confidence: float,
     ) -> None:
         """Extract and link cross-references between sections."""
         for match in self.reference_pattern.finditer(content):
-            ref_id = match.group(1)
-            ref_type = match.group(2) if match.group(2) else "unknown"
-            ref_target = match.group(3) if match.group(3) else ""
+            match.group(1)
+            match.group(2) or "unknown"
+            ref_target = match.group(3) or ""
 
             # Try to link to section
             for section in sections.values():

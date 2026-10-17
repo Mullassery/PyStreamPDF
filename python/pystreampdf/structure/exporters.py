@@ -1,10 +1,10 @@
 """Export document graphs in multiple formats for different downstream systems."""
 
 import json
-from typing import Dict, List, Any
 from datetime import datetime
+from typing import Any
 
-from .builder import DocumentGraph, NodeType, EdgeType
+from .builder import DocumentGraph, EdgeType, NodeType
 
 
 class GraphExporter:
@@ -43,7 +43,7 @@ class MarkdownExporter(GraphExporter):
         return "\n".join(lines)
 
     def _export_subtree(
-        self, node_id: str, graph: DocumentGraph, lines: List[str], level: int
+        self, node_id: str, graph: DocumentGraph, lines: list[str], level: int
     ) -> None:
         """Recursively export node and children."""
         node = graph.nodes[node_id]
@@ -168,7 +168,7 @@ class RAGOptimizedExporter(GraphExporter):
         )
 
     @staticmethod
-    def _find_related(node_id: str, graph: DocumentGraph) -> List[Dict[str, Any]]:
+    def _find_related(node_id: str, graph: DocumentGraph) -> list[dict[str, Any]]:
         """Find all relationships for a node."""
         relationships = []
 

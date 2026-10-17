@@ -1,6 +1,6 @@
 """REST API server for StreamPDF - document intelligence workflow integration."""
 
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 
 class StreamPDFServer:
@@ -10,10 +10,10 @@ class StreamPDFServer:
         """Initialize server."""
         self.host = host
         self.port = port
-        self.documents: Dict[str, Dict[str, Any]] = {}
-        self.indexes: Dict[str, Dict[str, Any]] = {}
+        self.documents: dict[str, dict[str, Any]] = {}
+        self.indexes: dict[str, dict[str, Any]] = {}
 
-    def open_document(self, doc_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    def open_document(self, doc_id: str, config: dict[str, Any]) -> dict[str, Any]:
         """Open a document."""
         self.documents[doc_id] = {
             "id": doc_id,
@@ -29,7 +29,7 @@ class StreamPDFServer:
             "message": "Document opened successfully",
         }
 
-    def build_index(self, index_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    def build_index(self, index_id: str, config: dict[str, Any]) -> dict[str, Any]:
         """Build index for document."""
         doc_id = config.get("doc_id")
         if doc_id not in self.documents:
@@ -48,7 +48,7 @@ class StreamPDFServer:
             "message": "Index built successfully",
         }
 
-    def search_document(self, doc_id: str, query: str, limit: int = 10) -> Dict[str, Any]:
+    def search_document(self, doc_id: str, query: str, limit: int = 10) -> dict[str, Any]:
         """Search document."""
         if doc_id not in self.documents:
             return {"status": "error", "message": f"Document '{doc_id}' not found"}
@@ -61,7 +61,7 @@ class StreamPDFServer:
             "message": f"Search completed: {min(limit, 10)} results found",
         }
 
-    def extract_text(self, doc_id: str) -> Dict[str, Any]:
+    def extract_text(self, doc_id: str) -> dict[str, Any]:
         """Extract text from document."""
         if doc_id not in self.documents:
             return {"status": "error", "message": f"Document '{doc_id}' not found"}
@@ -74,7 +74,7 @@ class StreamPDFServer:
             "message": "Text extraction completed",
         }
 
-    def get_document_info(self, doc_id: str) -> Dict[str, Any]:
+    def get_document_info(self, doc_id: str) -> dict[str, Any]:
         """Get document metadata."""
         if doc_id not in self.documents:
             return {"status": "error", "message": f"Document '{doc_id}' not found"}
@@ -86,10 +86,10 @@ class StreamPDFServer:
             "path": doc["path"],
             "type": doc["type"],
             "page_count": doc["page_count"],
-            "status": doc["status"],
+            "document_status": doc["status"],
         }
 
-    def list_documents(self) -> Dict[str, Any]:
+    def list_documents(self) -> dict[str, Any]:
         """List all documents."""
         return {
             "status": "success",
@@ -97,7 +97,7 @@ class StreamPDFServer:
             "count": len(self.documents),
         }
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Health check endpoint."""
         return {
             "status": "healthy",
@@ -111,11 +111,11 @@ class StreamPDFServer:
 def create_flask_app(server: Optional[StreamPDFServer] = None):
     """Create Flask app for REST API."""
     try:
-        from flask import Flask, request, jsonify
+        from flask import Flask, jsonify, request
     except ImportError:
         raise ImportError(
             "Flask is required for REST API. Install with: pip install flask"
-        )
+        ) from None
 
     app = Flask(__name__)
     srv = server or StreamPDFServer()

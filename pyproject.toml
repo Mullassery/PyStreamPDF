@@ -52,3 +52,18 @@ python-source = "python"
 module-name = "pystreampdf._core"
 manifest-path = "python/Cargo.toml"
 include = ["LICENSE"]
+
+# Lint gate (PYSTREAMPDF-004): curated, high-signal ruleset (not `ALL`).
+# E501 is left to the formatter. `target-version` matches
+# `requires-python = ">=3.9"`.
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["python"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF", "PIE", "PERF", "FURB"]
+ignore = [
+    "E501",   # line length is the formatter's job
+    "RUF003", # ambiguous unicode in comments (arrows/checkmarks in docs)
+]

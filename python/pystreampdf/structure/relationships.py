@@ -1,11 +1,9 @@
 """Relationship extractor - converts intelligence insights into graph relationships."""
 
 from enum import Enum
-from typing import Dict, List, Optional, Set
 
 from ..intelligence.types import IntelligenceResult
-from ..pipeline import UnifiedAnalysisResult
-from .builder import DocumentGraph, GraphNode, GraphEdge, NodeType, EdgeType
+from .builder import DocumentGraph, EdgeType, GraphEdge, GraphNode, NodeType
 
 
 class RelationType(Enum):
@@ -31,7 +29,7 @@ class RelationshipExtractor:
 
     def extract_from_intelligence(
         self, intelligence_result: IntelligenceResult, parent_node_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """
         Extract relationships from intelligence analysis.
 
@@ -64,7 +62,7 @@ class RelationshipExtractor:
 
     def _extract_yaml_relationships(
         self, result: IntelligenceResult, parent_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """Extract structure from YAML metadata."""
         edges = []
 
@@ -97,7 +95,7 @@ class RelationshipExtractor:
 
     def _extract_json_relationships(
         self, result: IntelligenceResult, parent_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """Extract structure from JSON metadata."""
         edges = []
 
@@ -138,7 +136,7 @@ class RelationshipExtractor:
 
     def _extract_sql_relationships(
         self, result: IntelligenceResult, parent_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """Extract dependencies from SQL metadata."""
         edges = []
 
@@ -196,7 +194,7 @@ class RelationshipExtractor:
 
     def _extract_code_relationships(
         self, result: IntelligenceResult, parent_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """Extract structure from code metadata."""
         edges = []
 
@@ -277,7 +275,7 @@ class RelationshipExtractor:
 
     def _extract_log_relationships(
         self, result: IntelligenceResult, parent_id: str, graph: DocumentGraph
-    ) -> List[GraphEdge]:
+    ) -> list[GraphEdge]:
         """Extract patterns from log metadata."""
         edges = []
 

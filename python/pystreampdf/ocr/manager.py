@@ -5,7 +5,8 @@ Provides a registry for OCR providers and handles dispatch to the appropriate pr
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
+
 from .provider import OcrProvider, OcrResult
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class OcrManager:
 
     def __init__(self):
         """Initialize an empty manager."""
-        self._providers: Dict[str, OcrProvider] = {}
+        self._providers: dict[str, OcrProvider] = {}
         self._default_provider: Optional[str] = None
 
     def register(self, provider: OcrProvider) -> None:
@@ -73,11 +74,11 @@ class OcrManager:
             return None
         return self._providers.get(self._default_provider)
 
-    def available_providers(self) -> List[str]:
+    def available_providers(self) -> list[str]:
         """Get list of all registered provider names."""
         return list(self._providers.keys())
 
-    def available_installed(self) -> List[str]:
+    def available_installed(self) -> list[str]:
         """Get list of registered providers that are available (dependencies installed)."""
         return [name for name, p in self._providers.items() if p.is_available()]
 

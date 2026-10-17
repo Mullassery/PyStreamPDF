@@ -10,37 +10,37 @@ Transform PDF content into semantic knowledge:
 - Intelligent context assembly
 """
 
-from .entities import ConceptExtractor, Entity, EntityType
-from .relationships import RelationshipExtractor, Relationship, RelationType
-from .graph import KnowledgeGraph, GraphNode, GraphEdge
+from .assembler import AssemblyStrategy, ContextAssembler
 from .citations import CitationNetwork, CitationRelation
-from .topics import TopicModel, Topic
+from .entities import ConceptExtractor, Entity, EntityType
+from .graph import GraphEdge, GraphNode, KnowledgeGraph
+from .relationships import Relationship, RelationshipExtractor, RelationType
+from .topics import Topic, TopicModel
 from .verifier import FactVerifier, VerificationResult
-from .assembler import ContextAssembler, AssemblyStrategy
 
 __all__ = [
-    # Entity extraction
-    "ConceptExtractor",
-    "Entity",
-    "EntityType",
-    # Relationships
-    "RelationshipExtractor",
-    "Relationship",
-    "RelationType",
-    # Knowledge graph
-    "KnowledgeGraph",
-    "GraphNode",
-    "GraphEdge",
+    "AssemblyStrategy",
     # Citations
     "CitationNetwork",
     "CitationRelation",
-    # Topics
-    "TopicModel",
-    "Topic",
-    # Verification
-    "FactVerifier",
-    "VerificationResult",
+    # Entity extraction
+    "ConceptExtractor",
     # Context assembly
     "ContextAssembler",
-    "AssemblyStrategy",
+    "Entity",
+    "EntityType",
+    # Verification
+    "FactVerifier",
+    "GraphEdge",
+    "GraphNode",
+    # Knowledge graph
+    "KnowledgeGraph",
+    "RelationType",
+    "Relationship",
+    # Relationships
+    "RelationshipExtractor",
+    "Topic",
+    # Topics
+    "TopicModel",
+    "VerificationResult",
 ]

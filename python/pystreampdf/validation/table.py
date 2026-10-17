@@ -5,7 +5,7 @@ Detects missing columns, broken cells, and inconsistent table structure.
 """
 
 from collections import Counter
-from typing import List, Optional
+from typing import Optional
 
 from .text import TextValidator
 from .types import OcrTable, TableValidationResult, ValidationIssue
@@ -78,7 +78,7 @@ class TableValidator:
             issues=issues
         )
 
-    def _check_column_consistency(self, rows: List[List[str]]) -> Optional[ValidationIssue]:
+    def _check_column_consistency(self, rows: list[list[str]]) -> Optional[ValidationIssue]:
         """Check if rows have consistent number of columns."""
         if not rows:
             return None
@@ -100,7 +100,7 @@ class TableValidator:
 
         return None
 
-    def _check_empty_cells(self, rows: List[List[str]]) -> Optional[ValidationIssue]:
+    def _check_empty_cells(self, rows: list[list[str]]) -> Optional[ValidationIssue]:
         """Check for excessive empty cells."""
         if not rows:
             return None
@@ -124,7 +124,7 @@ class TableValidator:
 
         return None
 
-    def _check_corrupted_cells(self, rows: List[List[str]]) -> List[ValidationIssue]:
+    def _check_corrupted_cells(self, rows: list[list[str]]) -> list[ValidationIssue]:
         """Check cells for corrupted text."""
         issues = []
 
@@ -146,7 +146,7 @@ class TableValidator:
 
         return issues
 
-    def _estimate_accuracy(self, rows: List[List[str]]) -> float:
+    def _estimate_accuracy(self, rows: list[list[str]]) -> float:
         """Estimate accuracy of cell extraction (0.0-1.0)."""
         if not rows:
             return 0.0

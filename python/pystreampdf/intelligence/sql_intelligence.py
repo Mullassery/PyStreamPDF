@@ -1,7 +1,7 @@
 """SQL content intelligence and validation."""
 
 import re
-from typing import Dict, List, Optional, Set
+from typing import ClassVar, Optional
 
 from .types import IntelligenceResult
 
@@ -9,7 +9,7 @@ from .types import IntelligenceResult
 class SQLAnalyzer:
     """Analyzes SQL queries for dialect, syntax, and structure."""
 
-    KEYWORDS = {
+    KEYWORDS: ClassVar[dict[str, set[str]]] = {
         "select": {"select", "from", "where", "join", "group by", "order by"},
         "insert": {"insert", "into", "values"},
         "update": {"update", "set", "where"},
@@ -20,7 +20,7 @@ class SQLAnalyzer:
         "transactions": {"begin", "commit", "rollback", "savepoint"},
     }
 
-    DIALECTS = {
+    DIALECTS: ClassVar[dict[str, set[str]]] = {
         "postgresql": {"RETURNING", "::text", "->", "->>", "jsonb", "serial", "uuid", "interval"},
         "mysql": {"LIMIT", "AUTO_INCREMENT", "CHARSET", "COLLATE", "UNSIGNED", "ENUM"},
         "sqlite": {"AUTOINCREMENT", "INTEGER PRIMARY KEY", "WITHOUT ROWID", "PRAGMA"},
@@ -45,7 +45,7 @@ class SQLAnalyzer:
         metadata["query_count"] = len(queries)
 
         # Validate syntax
-        for i, query in enumerate(queries):
+        for _i, query in enumerate(queries):
             query_type = self._detect_query_type(query)
             if query_type:
                 metadata.setdefault("query_types", []).append(query_type)
@@ -83,7 +83,7 @@ class SQLAnalyzer:
 
         return "unknown"
 
-    def _parse_queries(self, text: str) -> List[str]:
+    def _parse_queries(self, text: str) -> list[str]:
         """Split text into individual SQL queries."""
         # Split by semicolon, but respect quoted strings
         queries = []
@@ -134,7 +134,7 @@ class SQLAnalyzer:
 
         return None
 
-    def _validate_query(self, query: str) -> List[str]:
+    def _validate_query(self, query: str) -> list[str]:
         """Validate SQL query syntax."""
         issues = []
         query_upper = query.upper()
@@ -207,7 +207,7 @@ class SQLAnalyzer:
 
         return not (in_single or in_double)
 
-    def _extract_structure(self, text: str, metadata: Dict) -> None:
+    def _extract_structure(self, text: str, metadata: dict) -> None:
         """Extract structural information from SQL."""
         text_upper = text.upper()
 
@@ -215,7 +215,7 @@ class SQLAnalyzer:
         table_pattern = r"(?:FROM|JOIN)\s+([a-zA-Z0-9_\.]+)"
         tables = re.findall(table_pattern, text_upper)
         if tables:
-            metadata["tables_referenced"] = list(set([t.split(".")[-1] for t in tables]))
+            metadata["tables_referenced"] = list({t.split(".")[-1] for t in tables})
 
         # Find column definitions
         column_pattern = r"([a-zA-Z0-9_]+)\s+(INT|VARCHAR|TEXT|BOOLEAN|TIMESTAMP|DECIMAL|UUID|JSONB|DATE)"

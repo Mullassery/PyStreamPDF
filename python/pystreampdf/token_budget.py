@@ -5,10 +5,10 @@ Allows users to define rules that scale token budgets based on PDF metadata
 to financial reports, compliance docs, etc., and smaller budgets to summaries.
 """
 
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
+from typing import Any, Optional
+
 import yaml
-import re
 
 
 @dataclass
@@ -16,7 +16,7 @@ class BudgetRule:
     """Rule for scaling token budget based on keywords."""
     keyword: str
     multiplier: float
-    match_fields: List[str] = field(default_factory=lambda: ["filename", "title"])
+    match_fields: list[str] = field(default_factory=lambda: ["filename", "title"])
     case_sensitive: bool = False
 
     def matches(self, filename: str, title: Optional[str] = None, content_preview: Optional[str] = None) -> bool:
@@ -64,7 +64,7 @@ class TokenBudgetConfig:
     MIN_BUDGET = 500
     MAX_BUDGET = 1000
 
-    def __init__(self, base_budget: int = 1000, rules: Optional[List[BudgetRule]] = None):
+    def __init__(self, base_budget: int = 1000, rules: Optional[list[BudgetRule]] = None):
         """Initialize token budget configuration.
 
         Args:
@@ -88,12 +88,12 @@ class TokenBudgetConfig:
             FileNotFoundError: If config file does not exist
             yaml.YAMLError: If YAML is invalid
         """
-        with open(path, "r") as f:
+        with open(path) as f:
             data = yaml.safe_load(f)
         return cls.from_dict(data)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TokenBudgetConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "TokenBudgetConfig":
         """Load configuration from a dictionary.
 
         Args:
@@ -149,7 +149,7 @@ class TokenBudgetConfig:
         budget = max(self.MIN_BUDGET, min(self.MAX_BUDGET, int(budget)))
         return budget
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Export configuration as dictionary for YAML serialization."""
         return {
             "base_budget": self.base_budget,

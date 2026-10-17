@@ -2,7 +2,7 @@
 
 import ast
 import re
-from typing import Dict, List, Optional, Set
+from typing import ClassVar
 
 from .types import IntelligenceResult
 
@@ -10,7 +10,7 @@ from .types import IntelligenceResult
 class CodeAnalyzer:
     """Analyzes source code for language, syntax, and structure."""
 
-    LANGUAGE_KEYWORDS = {
+    LANGUAGE_KEYWORDS: ClassVar[dict[str, set[str]]] = {
         "python": {"def", "class", "import", "from", "if", "for", "while", "try", "except"},
         "rust": {"fn", "struct", "impl", "use", "pub", "let", "mut", "match", "unsafe"},
         "cpp": {"include", "class", "void", "int", "return", "namespace", "template"},
@@ -77,7 +77,7 @@ class CodeAnalyzer:
 
         return "unknown"
 
-    def _validate_python(self, text: str) -> tuple[List[str], Dict]:
+    def _validate_python(self, text: str) -> tuple[list[str], dict]:
         """Validate Python code."""
         issues = []
         metadata = {}
@@ -126,8 +126,7 @@ class CodeAnalyzer:
 
             if char in pairs:
                 stack.append(char)
-            elif char in pairs.values():
-                if not stack or pairs[stack.pop()] != char:
-                    return False
+            elif char in pairs.values() and (not stack or pairs[stack.pop()] != char):
+                return False
 
         return len(stack) == 0

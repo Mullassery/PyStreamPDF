@@ -6,7 +6,7 @@ Uses pytesseract and Pillow for text extraction from images.
 
 import logging
 import time
-from typing import List, Optional
+from typing import Optional
 
 from ..provider import OcrCapabilities, OcrProvider, OcrResult, TextRegion
 
@@ -18,7 +18,7 @@ class TesseractProvider(OcrProvider):
 
     def __init__(
         self,
-        languages: Optional[List[str]] = None,
+        languages: Optional[list[str]] = None,
         config: str = "",
         tesseract_cmd: Optional[str] = None
     ):
@@ -81,9 +81,10 @@ class TesseractProvider(OcrProvider):
             ValueError: If image data is invalid
         """
         try:
+            import io
+
             import pytesseract
             from PIL import Image
-            import io
         except ImportError as e:
             raise ImportError(
                 "pytesseract and pillow required for Tesseract OCR. "

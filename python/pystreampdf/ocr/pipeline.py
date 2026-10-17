@@ -4,9 +4,9 @@ OCR Pipeline for hybrid text/OCR document processing.
 Routes text-based pages through existing extraction and scanned pages through OCR.
 """
 
-from dataclasses import dataclass
-from typing import List, Optional
 import time
+from dataclasses import dataclass
+from typing import Optional
 
 from .manager import OcrManager
 from .provider import OcrResult
@@ -40,7 +40,7 @@ class OcrPipeline:
 
     def process_document(
         self, pdf_path: str, provider_name: Optional[str] = None
-    ) -> List[ProcessedPage]:
+    ) -> list[ProcessedPage]:
         """
         Process all pages in a PDF.
 

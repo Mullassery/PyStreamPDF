@@ -2,7 +2,6 @@
 
 import json
 import sys
-from typing import Optional
 
 
 class CLIInterface:
@@ -149,7 +148,7 @@ class CLIInterface:
             "path": doc["path"],
             "type": doc["type"],
             "page_count": doc["page_count"],
-            "status": doc["status"],
+            "document_status": doc["status"],
         }
 
     def list_documents(self) -> dict:

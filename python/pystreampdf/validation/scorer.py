@@ -5,7 +5,7 @@ Combines text, table, and layout validation into a single confidence score
 and provides actionable recommendations for OCR output quality.
 """
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from .layout import LayoutValidator
 from .table import TableValidator
@@ -47,8 +47,8 @@ class ConfidenceScorer:
     def score(
         self,
         text: str,
-        tables: Optional[List[OcrTable]] = None,
-        headings: Optional[List[Tuple[str, int]]] = None,
+        tables: Optional[list[OcrTable]] = None,
+        headings: Optional[list[tuple[str, int]]] = None,
         ocr_confidence: Optional[float] = None
     ) -> PageConfidenceScore:
         """

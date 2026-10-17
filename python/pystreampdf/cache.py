@@ -7,6 +7,7 @@ Caching is content-addressed (SHA256 hash of PDF bytes), so identical PDFs
 are recognized regardless of filename or location.
 """
 
+import contextlib
 import hashlib
 import hmac
 import logging
@@ -15,10 +16,10 @@ import pickle
 import secrets
 import stat
 import time
-from typing import Callable, List, Optional, Tuple, Dict, Any
-from dataclasses import dataclass, field
 from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable, Optional
 
 from .extraction import ContentChunk
 from .token_budget import TokenBudgetConfig
@@ -35,7 +36,7 @@ class CachedDocument:
     title: Optional[str]
     page_count: int
     content_preview: str
-    chunks: List[ContentChunk]
+    chunks: list[ContentChunk]
     cached_at: float
     last_accessed: float
     access_count: int = 0
@@ -95,10 +96,9 @@ class PDFCache:
             disk_cache_dir = str(Path.home() / self.CACHE_DIR_DEFAULT)
         self.disk_cache_dir = Path(disk_cache_dir)
         self.disk_cache_dir.mkdir(parents=True, exist_ok=True)
-        try:
-            os.chmod(self.disk_cache_dir, stat.S_IRWXU)  # 0700: owner-only
-        except OSError:
-            pass
+        # 0700: owner-only; best-effort (some filesystems reject chmod)
+        with contextlib.suppress(OSError):
+            os.chmod(self.disk_cache_dir, stat.S_IRWXU)
 
         self._hmac_key = self._load_or_create_hmac_key()
 
@@ -141,7 +141,7 @@ class PDFCache:
     def get_or_process(
         self,
         pdf_path: str,
-        process_fn: Callable[[str], Tuple[List[ContentChunk], str, Optional[str], int]],
+        process_fn: Callable[[str], tuple[list[ContentChunk], str, Optional[str], int]],
     ) -> CachedDocument:
         """Get a cached document or process it if not cached.
 
@@ -227,7 +227,7 @@ class PDFCache:
         self.hits = 0
         self.misses = 0
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Return cache statistics.
 
         Returns:
@@ -316,7 +316,7 @@ class PDFCache:
 
         memory_limit_bytes = self.memory_limit_mb * 1024 * 1024
         while self.l1_size_bytes > memory_limit_bytes and self.l1_cache:
-            evicted_hash, evicted_doc = self.l1_cache.popitem(last=False)
+            _evicted_hash, evicted_doc = self.l1_cache.popitem(last=False)
             self.l1_size_bytes -= evicted_doc.memory_size_bytes()
 
     def _add_to_l2(self, file_hash: str, doc: CachedDocument) -> None:

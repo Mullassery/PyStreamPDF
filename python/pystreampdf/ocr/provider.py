@@ -6,7 +6,7 @@ Defines the base OcrProvider interface and common data structures for OCR result
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Optional
 
 
 @dataclass
@@ -27,11 +27,11 @@ class OcrResult:
     """Complete OCR extraction result for a single image or page."""
     text: str  # Full extracted text
     confidence: float  # Overall confidence 0.0-1.0
-    regions: List[TextRegion] = field(default_factory=list)  # Per-region details
+    regions: list[TextRegion] = field(default_factory=list)  # Per-region details
     provider_name: str = ""  # Name of OCR provider that generated this
     page_number: Optional[int] = None  # Page number if from multi-page PDF
     processing_time_ms: Optional[float] = None  # Time to extract (for perf tracking)
-    metadata: Dict = field(default_factory=dict)  # Provider-specific metadata
+    metadata: dict = field(default_factory=dict)  # Provider-specific metadata
 
     def __post_init__(self):
         if not 0.0 <= self.confidence <= 1.0:
@@ -44,7 +44,7 @@ class OcrCapabilities:
     supports_handwriting: bool = False
     supports_tables: bool = False
     supports_formulas: bool = False
-    supported_languages: List[str] = field(default_factory=list)  # e.g. ["en", "fr"]
+    supported_languages: list[str] = field(default_factory=list)  # e.g. ["en", "fr"]
     max_image_size: Optional[tuple] = None  # (width, height) in pixels
 
 
@@ -55,19 +55,16 @@ class OcrProvider(ABC):
     @abstractmethod
     def name(self) -> str:
         """Provider name (e.g. 'tesseract', 'paddle', 'unlimited_ocr')."""
-        pass
 
     @property
     @abstractmethod
     def version(self) -> str:
         """Provider version string."""
-        pass
 
     @property
     @abstractmethod
     def capabilities(self) -> OcrCapabilities:
         """Capabilities of this provider."""
-        pass
 
     @abstractmethod
     def extract(self, image_data: bytes, page_number: Optional[int] = None) -> OcrResult:
@@ -85,9 +82,8 @@ class OcrProvider(ABC):
             ImportError: If required dependencies are not installed
             ValueError: If image_data is invalid
         """
-        pass
 
-    def extract_batch(self, images: List[tuple]) -> List[OcrResult]:
+    def extract_batch(self, images: list[tuple]) -> list[OcrResult]:
         """
         Extract text from multiple images.
 

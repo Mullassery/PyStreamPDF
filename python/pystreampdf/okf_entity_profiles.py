@@ -4,10 +4,10 @@ Entity type confidence scores, extraction accuracy by domain,
 and hallucination risk profiles for document intelligence.
 """
 
-from pathlib import Path
-from typing import Dict, List, Optional
 import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
 
 
 @dataclass
@@ -25,7 +25,7 @@ class EntityProfile:
 class OKFEntityProfiles:
     """Manage entity extraction profiles."""
 
-    def __init__(self, profiles_dir: Path = None):
+    def __init__(self, profiles_dir: Optional[Path] = None):
         self.profiles_dir = profiles_dir or Path.cwd() / "entity_profiles"
         self.profiles_dir.mkdir(exist_ok=True)
 
@@ -54,7 +54,7 @@ class OKFEntityProfiles:
             data = json.load(f)
             return EntityProfile(**data)
 
-    def rank_entities_by_confidence(self, domain: str) -> List[Dict]:
+    def rank_entities_by_confidence(self, domain: str) -> list[dict]:
         """Rank entities by extraction confidence."""
         entities = {}
 

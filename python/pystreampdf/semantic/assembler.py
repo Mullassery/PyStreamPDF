@@ -8,11 +8,11 @@ Assemble optimal context for AI queries using multiple strategies:
 """
 
 import logging
-from typing import List, Optional, Dict, Tuple, Set, Any
-from enum import Enum
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Optional
 
-from ..tokenizer import count_tokens, HEURISTIC_CHARS_PER_TOKEN
+from ..tokenizer import HEURISTIC_CHARS_PER_TOKEN, count_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,8 @@ class AssembledContext:
     query: str
     content: str  # Full assembled content
     token_count: int
-    sources: List[int] = field(default_factory=list)  # Source IDs
-    sections: List[str] = field(default_factory=list)  # Logical sections
+    sources: list[int] = field(default_factory=list)  # Source IDs
+    sections: list[str] = field(default_factory=list)  # Logical sections
     coverage: float = 0.0  # Coverage score (0-1)
     coherence: float = 0.0  # Coherence score (0-1)
     strategy: str = "scholarly"
@@ -45,7 +45,7 @@ class ContextAssembler:
     optimal context for AI agent queries using multiple strategies.
     """
 
-    def __init__(self, knowledge_graph=None, citation_network=None, chunks: Optional[List[Tuple[str, int]]] = None, token_budget_config=None):
+    def __init__(self, knowledge_graph=None, citation_network=None, chunks: Optional[list[tuple[str, int]]] = None, token_budget_config=None):
         """Initialize assembler.
 
         Args:
@@ -71,7 +71,7 @@ class ContextAssembler:
         query: str,
         max_tokens: int = 2000,
         strategy: AssemblyStrategy = AssemblyStrategy.SCHOLARLY,
-        document_context: Optional[Dict[str, Any]] = None,
+        document_context: Optional[dict[str, Any]] = None,
     ) -> AssembledContext:
         """Assemble optimal context for query.
 
@@ -122,7 +122,7 @@ class ContextAssembler:
             related = self.graph.query(query.lower(), depth=2)
             # Sort by importance (in-degree)
             concepts = []
-            for rel_type, neighbors in related.items():
+            for neighbors in related.values():
                 for neighbor, confidence in neighbors:
                     if neighbor in self.graph.nodes:
                         node = self.graph.nodes[neighbor]
@@ -131,7 +131,7 @@ class ContextAssembler:
             concepts = sorted(concepts, key=lambda x: -x[1])[:10]
 
             # Add concept introductions
-            for concept, _, confidence in concepts:
+            for concept, _, _ in concepts:
                 for source_text, source_id in self.chunks:
                     if concept.lower() in source_text.lower():
                         tokens = count_tokens(source_text)
@@ -146,8 +146,7 @@ class ContextAssembler:
             # Get influential papers
             try:
                 influential = self.citations.top_cited(limit=3)
-                for paper in influential:
-                    sections.append(f"Citation: {paper}")
+                sections.extend(f"Citation: {paper}" for paper in influential)
             except AttributeError:
                 # CitationNetwork (semantic/citations.py) has no `top_cited`
                 # method today, so this always raises for the real type this
@@ -252,7 +251,7 @@ class ContextAssembler:
         chunk_size = max_tokens // min(5, len(self.chunks))  # Max 5 chunks
 
         # Evenly distribute across all chunks
-        for i, (source_text, source_id) in enumerate(self.chunks):
+        for _i, (source_text, source_id) in enumerate(self.chunks):
             # Take first chunk_size characters from each
             text_slice = source_text[:int(chunk_size / self.avg_tokens_per_char)]
             tokens = count_tokens(text_slice)
@@ -313,7 +312,7 @@ class ContextAssembler:
             strategy=AssemblyStrategy.TUTORIAL.value,
         )
 
-    def _calculate_coherence(self, sections: List[str]) -> float:
+    def _calculate_coherence(self, sections: list[str]) -> float:
         """Calculate coherence score of assembled sections.
 
         Args:
@@ -336,13 +335,13 @@ class ContextAssembler:
         if sections:
             lengths = [len(s) for s in sections]
             avg_length = sum(lengths) / len(lengths)
-            variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
+            variance = sum((length - avg_length) ** 2 for length in lengths) / len(lengths)
             # Lower variance = higher coherence
             coherence -= min(0.2, variance / 1000000)
 
         return min(1.0, max(0.0, coherence))
 
-    def estimate_query_cost(self, query: str) -> Dict:
+    def estimate_query_cost(self, query: str) -> dict:
         """Estimate cost/tokens for different strategies.
 
         Args:

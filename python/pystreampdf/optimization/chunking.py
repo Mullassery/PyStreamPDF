@@ -1,12 +1,12 @@
 """RAG-Ready Chunking: Combine selective intelligence + compression + metadata."""
 
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Optional
 
-from .selector import SelectiveIntelligence, ContentSelector, ContentDetail
-from .compressor import AdaptiveCompressor, CompressionStrategy
-from .metadata import RetrievalMetadata, MetadataInjector
+from .compressor import AdaptiveCompressor
+from .metadata import MetadataInjector, RetrievalMetadata
+from .selector import ContentSelector, SelectiveIntelligence
 
 
 class ChunkingStrategy(Enum):
@@ -31,7 +31,7 @@ class RAGChunk:
         """Estimated tokens in this chunk."""
         return self.metadata.estimated_tokens
 
-    def to_retrieval_format(self) -> Dict[str, Any]:
+    def to_retrieval_format(self) -> dict[str, Any]:
         """Format for RAG system."""
         return {
             "id": self.id,
@@ -64,8 +64,8 @@ class ChunkingEngine:
         self.injector = MetadataInjector()
 
     def chunk_graph(
-        self, graph_data: Dict[str, Any], confidence_floor: float = 0.5
-    ) -> List[RAGChunk]:
+        self, graph_data: dict[str, Any], confidence_floor: float = 0.5
+    ) -> list[RAGChunk]:
         """
         Convert document graph into RAG chunks.
 
@@ -100,7 +100,7 @@ class ChunkingEngine:
         return chunks
 
     def _node_to_chunk(
-        self, node_id: str, node_info: Dict[str, Any], graph_data: Dict[str, Any]
+        self, node_id: str, node_info: dict[str, Any], graph_data: dict[str, Any]
     ) -> Optional[RAGChunk]:
         """Convert a graph node to a RAGChunk."""
         content = node_info.get("content", "")
@@ -142,7 +142,7 @@ class ChunkingEngine:
             original_content_length=len(content),
         )
 
-    def _apply_token_budget(self, chunks: List[RAGChunk]) -> List[RAGChunk]:
+    def _apply_token_budget(self, chunks: list[RAGChunk]) -> list[RAGChunk]:
         """Enforce token budget by truncating low-priority chunks."""
         total_tokens = sum(c.token_count() for c in chunks)
 

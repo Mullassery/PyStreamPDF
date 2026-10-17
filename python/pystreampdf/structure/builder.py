@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 from uuid import uuid4
 
 
@@ -39,7 +39,7 @@ class GraphNode:
     node_type: NodeType = NodeType.NARRATIVE
     content: str = ""
     confidence: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Source tracking
     source_analyzer: Optional[str] = None  # "yaml", "json", "code", etc.
@@ -48,10 +48,10 @@ class GraphNode:
 
     # Intelligence metadata
     language: Optional[str] = None  # e.g., "python", "sql"
-    validation_issues: List[str] = field(default_factory=list)
-    corrections_applied: List[str] = field(default_factory=list)
+    validation_issues: list[str] = field(default_factory=list)
+    corrections_applied: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "id": self.id,
@@ -73,9 +73,9 @@ class GraphEdge:
     target_id: str
     edge_type: EdgeType = EdgeType.RELATED_TO
     confidence: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "source": self.source_id,
@@ -94,8 +94,8 @@ class DocumentGraph:
     """
 
     def __init__(self):
-        self.nodes: Dict[str, GraphNode] = {}
-        self.edges: List[GraphEdge] = []
+        self.nodes: dict[str, GraphNode] = {}
+        self.edges: list[GraphEdge] = []
         self.root_id: Optional[str] = None
 
     def add_node(self, node: GraphNode) -> str:
@@ -117,23 +117,23 @@ class DocumentGraph:
             raise ValueError(f"Node {node_id} not in graph")
         self.root_id = node_id
 
-    def get_children(self, node_id: str) -> List[GraphNode]:
+    def get_children(self, node_id: str) -> list[GraphNode]:
         """Get all direct children of a node."""
-        children = []
-        for edge in self.edges:
-            if edge.source_id == node_id and edge.edge_type == EdgeType.CONTAINS:
-                children.append(self.nodes[edge.target_id])
-        return children
+        return [
+            self.nodes[edge.target_id]
+            for edge in self.edges
+            if edge.source_id == node_id and edge.edge_type == EdgeType.CONTAINS
+        ]
 
-    def get_parents(self, node_id: str) -> List[GraphNode]:
+    def get_parents(self, node_id: str) -> list[GraphNode]:
         """Get all direct parents of a node."""
-        parents = []
-        for edge in self.edges:
-            if edge.target_id == node_id and edge.edge_type == EdgeType.CONTAINS:
-                parents.append(self.nodes[edge.source_id])
-        return parents
+        return [
+            self.nodes[edge.source_id]
+            for edge in self.edges
+            if edge.target_id == node_id and edge.edge_type == EdgeType.CONTAINS
+        ]
 
-    def get_related(self, node_id: str) -> List[GraphNode]:
+    def get_related(self, node_id: str) -> list[GraphNode]:
         """Get all related nodes (any edge type)."""
         related = set()
         for edge in self.edges:
@@ -175,7 +175,7 @@ class DocumentGraph:
 
         return 0.0  # No path found
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert graph to dictionary."""
         return {
             "nodes": {nid: node.to_dict() for nid, node in self.nodes.items()},
@@ -188,14 +188,14 @@ class DocumentGraph:
             },
         }
 
-    def node_count_by_type(self) -> Dict[str, int]:
+    def node_count_by_type(self) -> dict[str, int]:
         """Count nodes by type."""
         counts = {}
         for node in self.nodes.values():
             counts[node.node_type.value] = counts.get(node.node_type.value, 0) + 1
         return counts
 
-    def edge_count_by_type(self) -> Dict[str, int]:
+    def edge_count_by_type(self) -> dict[str, int]:
         """Count edges by type."""
         counts = {}
         for edge in self.edges:

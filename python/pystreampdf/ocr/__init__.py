@@ -16,13 +16,13 @@ from .provider import OcrCapabilities, OcrProvider, OcrResult, TextRegion
 from .providers import PaddleProvider, TesseractProvider
 
 __all__ = [
-    "OcrProvider",
-    "OcrResult",
-    "TextRegion",
     "OcrCapabilities",
     "OcrManager",
     "OcrPipeline",
+    "OcrProvider",
+    "OcrResult",
+    "PaddleProvider",
     "ProcessedPage",
     "TesseractProvider",
-    "PaddleProvider",
+    "TextRegion",
 ]

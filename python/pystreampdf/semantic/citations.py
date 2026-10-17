@@ -1,8 +1,8 @@
 """Citation network extraction and analysis."""
 
-from typing import List, Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 
 class CitationRelation(str, Enum):
@@ -25,8 +25,8 @@ class CitationNetwork:
 
     def __init__(self):
         """Initialize citation network."""
-        self.citations: List[Citation] = []
-        self.papers: Dict[str, Dict] = {}
+        self.citations: list[Citation] = []
+        self.papers: dict[str, dict] = {}
 
     def add_paper(self, paper_id: str, title: str = "", year: Optional[int] = None):
         """Add paper to network."""

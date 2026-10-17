@@ -1,8 +1,8 @@
 """Selective Intelligence: Identify what needs full detail vs summaries."""
 
-from enum import Enum
-from typing import Dict, List, Optional
 from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
 
 from ..structure.builder import NodeType
 from ..tokenizer import HEURISTIC_CHARS_PER_TOKEN
@@ -38,7 +38,7 @@ class SelectiveIntelligence:
 
     def __init__(self):
         # Default policies: what detail for each content type
-        self.policies: Dict[NodeType, SelectionPolicy] = {
+        self.policies: dict[NodeType, SelectionPolicy] = {
             # Technical (keep full detail - lossless)
             NodeType.CODE: SelectionPolicy(NodeType.CODE, ContentDetail.FULL, min_confidence=0.5),
             NodeType.CONFIG: SelectionPolicy(NodeType.CONFIG, ContentDetail.FULL, min_confidence=0.5),
@@ -93,7 +93,7 @@ class ContentSelector:
 
     def select_for_rag(
         self, node_type: NodeType, confidence: float, content_length: int
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """
         Select content for RAG with recommendations.
 
@@ -140,7 +140,7 @@ class ContentSelector:
         }
 
         type_priority = type_priorities.get(node_type, 0.5)
-        overall_priority = confidence * type_priority * (compression_ratio if compression_ratio > 0 else 0)
+        overall_priority = confidence * type_priority * (max(0, compression_ratio))
 
         return {
             "include": detail != ContentDetail.SKIP,
@@ -151,8 +151,8 @@ class ContentSelector:
         }
 
     def select_batch(
-        self, nodes: List[Dict[str, any]]
-    ) -> List[Dict[str, any]]:
+        self, nodes: list[dict[str, any]]
+    ) -> list[dict[str, any]]:
         """
         Select multiple nodes, returning selection decisions.
 

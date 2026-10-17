@@ -1,8 +1,7 @@
 """Adaptive Compression: Technical (lossless) vs Narrative (lossy)."""
 
-from enum import Enum
-from typing import Optional
 import re
+from enum import Enum
 
 
 class CompressionStrategy(Enum):
@@ -53,7 +52,7 @@ class AdaptiveCompressor:
             # Keep non-empty, non-comment lines
             if stripped and not stripped.startswith("#"):
                 # Remove trailing comments (but keep inline logic)
-                if " #" in stripped and not "http" in stripped:
+                if " #" in stripped and "http" not in stripped:
                     stripped = stripped.split(" #")[0].strip()
 
                 compressed.append(stripped)

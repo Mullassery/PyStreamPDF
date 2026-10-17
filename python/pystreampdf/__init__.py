@@ -9,39 +9,39 @@ __version__ = "2.3.0"  # Real MCP tool implementations (extract/OCR/validate/etc
 
 # Optional: Rust core bindings (requires maturin build)
 try:
-    from pystreampdf._core import open, load_index
+    from pystreampdf._core import load_index, open
 except ImportError:
     open = None
     load_index = None
 
 # Python extraction and parsing modules
+from .cache import CachedDocument, PDFCache
 from .extraction import (
-    ReadingOrderCorrector,
-    TableExtractor,
-    SemanticChunker,
-    MultimediaAnalyzer,
     CitationTracker,
-    ElementType,
-    ReadingOrder,
     ContentChunk,
-    TableStructure,
+    ElementType,
+    MultimediaAnalyzer,
     MultimediaElement,
+    ReadingOrder,
+    ReadingOrderCorrector,
+    SemanticChunker,
     SourceLocation,
+    TableExtractor,
+    TableStructure,
     TextFragment,
 )
 
 # Caching and token budget configuration
-from .token_budget import TokenBudgetConfig, BudgetRule
-from .cache import PDFCache, CachedDocument
+from .token_budget import BudgetRule, TokenBudgetConfig
 
 # Dashboard and CLI utilities
 try:
     from .cli_dashboard import (
         DashboardMetrics,
-        SimpleDashboard,
-        RichDashboard,
-        TextualDashboard,
         PyStreamPDFDashboard,
+        RichDashboard,
+        SimpleDashboard,
+        TextualDashboard,
     )
 except ImportError:
     DashboardMetrics = None
@@ -53,8 +53,8 @@ except ImportError:
 # Excel export utilities
 try:
     from .excel_export import (
-        ExtractedTable,
         ExcelExporter,
+        ExtractedTable,
         PDFToExcelPipeline,
     )
 except ImportError:
@@ -65,15 +65,15 @@ except ImportError:
 # OCR module (optional)
 try:
     from .ocr import (
+        OcrCapabilities,
         OcrManager,
+        OcrPipeline,
         OcrProvider,
         OcrResult,
-        OcrPipeline,
-        ProcessedPage,
-        TextRegion,
-        OcrCapabilities,
-        TesseractProvider,
         PaddleProvider,
+        ProcessedPage,
+        TesseractProvider,
+        TextRegion,
     )
 except ImportError:
     OcrManager = None
@@ -89,16 +89,16 @@ except ImportError:
 # Validation module (optional)
 try:
     from .validation import (
-        TextValidator,
-        TableValidator,
-        LayoutValidator,
         ConfidenceScorer,
-        ValidationIssue,
-        ValidationResult,
-        TableValidationResult,
+        LayoutValidator,
         OcrTable,
         PageConfidenceScore,
         Recommendation,
+        TableValidationResult,
+        TableValidator,
+        TextValidator,
+        ValidationIssue,
+        ValidationResult,
     )
 except ImportError:
     TextValidator = None
@@ -115,13 +115,13 @@ except ImportError:
 # Intelligence module (optional)
 try:
     from .intelligence import (
-        YAMLAnalyzer,
-        JSONAnalyzer,
         CodeAnalyzer,
+        CorrectionSuggestion,
+        IntelligenceResult,
+        JSONAnalyzer,
         LogAnalyzer,
         SQLAnalyzer,
-        IntelligenceResult,
-        CorrectionSuggestion,
+        YAMLAnalyzer,
     )
 except ImportError:
     YAMLAnalyzer = None
@@ -135,10 +135,10 @@ except ImportError:
 # Unified analysis pipeline (Phase 5c integration)
 try:
     from .pipeline import (
-        AnalysisPipeline,
-        UnifiedAnalysisResult,
-        AnalysisStage,
         AnalysisMetrics,
+        AnalysisPipeline,
+        AnalysisStage,
+        UnifiedAnalysisResult,
     )
 except ImportError:
     AnalysisPipeline = None
@@ -150,8 +150,8 @@ except ImportError:
 try:
     from .structure import (
         DocumentGraph,
-        GraphNode,
         GraphEdge,
+        GraphNode,
         RelationshipExtractor,
         RelationType,
     )

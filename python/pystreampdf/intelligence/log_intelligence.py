@@ -1,7 +1,7 @@
 """Log file intelligence and error detection."""
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import ClassVar, Optional
 
 from .types import IntelligenceResult
 
@@ -9,7 +9,7 @@ from .types import IntelligenceResult
 class LogAnalyzer:
     """Analyzes log file content and detects errors."""
 
-    LOG_FORMATS = {
+    LOG_FORMATS: ClassVar[dict[str, str]] = {
         "syslog": r"^\w{3}\s+\d+ \d{2}:\d{2}:\d{2}",
         "journalctl": r"^\w{3} \d+ \d{2}:\d{2}:\d{2}\.\d+",
         "kernel": r"^\[\s*\d+\.\d+\]",
@@ -17,8 +17,8 @@ class LogAnalyzer:
         "k8s": r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",
     }
 
-    CRASH_PATTERNS = {"segfault", "segmentation", "oom", "killed", "panic", "backtrace", "core dump"}
-    RESOURCE_PATTERNS = {"no space left", "out of memory", "enomem", "too many open files"}
+    CRASH_PATTERNS: ClassVar[set[str]] = {"segfault", "segmentation", "oom", "killed", "panic", "backtrace", "core dump"}
+    RESOURCE_PATTERNS: ClassVar[set[str]] = {"no space left", "out of memory", "enomem", "too many open files"}
 
     def analyze(self, text: str) -> IntelligenceResult:
         """Analyze log content."""

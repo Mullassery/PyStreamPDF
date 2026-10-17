@@ -2,7 +2,7 @@
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .types import CorrectionSuggestion, IntelligenceResult
 
@@ -56,7 +56,7 @@ class JSONAnalyzer:
             metadata=metadata
         )
 
-    def _attempt_recovery(self, text: str) -> tuple[str, List[CorrectionSuggestion]]:
+    def _attempt_recovery(self, text: str) -> tuple[str, list[CorrectionSuggestion]]:
         """Attempt to recover from common JSON errors."""
         suggestions = []
         corrected = text.strip()
@@ -98,7 +98,7 @@ class JSONAnalyzer:
 
         return corrected, suggestions
 
-    def _extract_metadata(self, obj: Any) -> Dict:
+    def _extract_metadata(self, obj: Any) -> dict:
         """Extract metadata from parsed JSON."""
         metadata = {}
 
@@ -116,7 +116,7 @@ class JSONAnalyzer:
 
         return metadata
 
-    def _infer_purpose(self, obj: Dict) -> str:
+    def _infer_purpose(self, obj: dict) -> str:
         """Infer the purpose of a JSON object."""
         keys = set(obj.keys())
 

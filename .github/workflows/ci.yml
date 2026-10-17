@@ -79,3 +79,22 @@ jobs:
             echo "ERROR: expected test suite at repo-root tests/ directory, none found"
             exit 1
           fi
+
+  # Lint gate for the Python package (PYSTREAMPDF-004). Uses the curated
+  # ruleset in pyproject.toml ([tool.ruff.lint]); previously the repo had
+  # no enforced Python lint at all.
+  python-lint:
+    name: Python Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install "ruff>=0.5.0"
+
+      - name: Ruff
+        run: ruff check python/

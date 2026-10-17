@@ -4,9 +4,9 @@ This module provides functionality to extract structured data from PDFs and expo
 directly to Excel spreadsheets using PyStreamXL.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,13 @@ class TableCell:
 @dataclass
 class ExtractedTable:
     """Represents a table extracted from a PDF."""
-    rows: List[List[Any]]
-    headers: Optional[List[str]] = None
+    rows: list[list[Any]]
+    headers: Optional[list[str]] = None
     page_number: int = 0
     confidence: float = 1.0
-    location: Optional[Tuple[float, float, float, float]] = None  # x1, y1, x2, y2
+    location: Optional[tuple[float, float, float, float]] = None  # x1, y1, x2, y2
 
-    def normalize_for_excel(self) -> List[List[Any]]:
+    def normalize_for_excel(self) -> list[list[Any]]:
         """Normalize table data for Excel export."""
         normalized = []
 
@@ -67,7 +67,7 @@ class ExtractedTable:
 
         return normalized
 
-    def to_dict_rows(self) -> List[Dict[str, Any]]:
+    def to_dict_rows(self) -> list[dict[str, Any]]:
         """Convert table to list of dictionaries (keyed by headers)."""
         if not self.headers:
             return []
@@ -83,14 +83,14 @@ class TableExtractor:
 
     def __init__(self):
         """Initialize the table extractor."""
-        self.extracted_tables: List[ExtractedTable] = []
+        self.extracted_tables: list[ExtractedTable] = []
 
     def extract_tables_from_pdf(
         self,
         pdf_path: str,
         confidence_threshold: float = 0.7,
-        page_range: Optional[Tuple[int, int]] = None,
-    ) -> List[ExtractedTable]:
+        page_range: Optional[tuple[int, int]] = None,
+    ) -> list[ExtractedTable]:
         """
         Extract tables from a PDF document.
 
@@ -105,7 +105,7 @@ class TableExtractor:
         try:
             import pystreampdf
         except ImportError:
-            raise ImportError("PyStreamPDF is required for PDF table extraction")
+            raise ImportError("PyStreamPDF is required for PDF table extraction") from None
 
         self.extracted_tables = []
 
@@ -142,7 +142,7 @@ class TableExtractor:
         doc: Any,
         page_num: int,
         confidence_threshold: float,
-    ) -> List[ExtractedTable]:
+    ) -> list[ExtractedTable]:
         """Extract tables from a single page."""
         tables = []
 
@@ -214,7 +214,7 @@ class ExcelExporter:
 
     def export_tables_to_excel(
         self,
-        tables: List[ExtractedTable],
+        tables: list[ExtractedTable],
         output_path: str,
         sheet_name: Optional[str] = None,
     ) -> None:
@@ -229,7 +229,7 @@ class ExcelExporter:
         try:
             import pystreamxl
         except ImportError:
-            raise ImportError("PyStreamXL is required for Excel export")
+            raise ImportError("PyStreamXL is required for Excel export") from None
 
         if not tables:
             logger.warning("No tables to export")
@@ -291,7 +291,7 @@ class PDFToExcelPipeline:
         confidence_threshold: float = 0.7,
         validate_quality: bool = True,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Convert PDF to Excel with optional quality validation.
 
@@ -345,7 +345,7 @@ class PDFToExcelPipeline:
 
         return result
 
-    def _validate_tables_quality(self, tables: List[ExtractedTable]) -> List[ExtractedTable]:
+    def _validate_tables_quality(self, tables: list[ExtractedTable]) -> list[ExtractedTable]:
         """Validate extracted tables using quality validator."""
         if not self.quality_validator:
             return tables
@@ -392,14 +392,14 @@ class PDFToExcelPipeline:
 def extract_tables_from_pdf(
     pdf_path: str,
     confidence_threshold: float = 0.7,
-) -> List[ExtractedTable]:
+) -> list[ExtractedTable]:
     """Convenience function to extract tables from PDF."""
     extractor = TableExtractor()
     return extractor.extract_tables_from_pdf(pdf_path, confidence_threshold)
 
 
 def export_tables_to_excel(
-    tables: List[ExtractedTable],
+    tables: list[ExtractedTable],
     output_path: str,
 ) -> None:
     """Convenience function to export tables to Excel."""
@@ -411,7 +411,7 @@ def convert_pdf_to_excel(
     pdf_path: str,
     output_path: str,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Convenience function for complete PDF to Excel conversion."""
     pipeline = PDFToExcelPipeline()
     return pipeline.convert_pdf_to_excel(pdf_path, output_path, **kwargs)

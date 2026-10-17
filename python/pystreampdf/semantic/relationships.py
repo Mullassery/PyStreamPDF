@@ -4,10 +4,10 @@ Detect relationships between entities (cites, extends, refutes, etc.)
 using pattern matching and syntactic analysis.
 """
 
-from typing import List, Optional, Dict, Tuple, Set
-from dataclasses import dataclass, field
-from enum import Enum
 import re
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
 
 
 class RelationType(str, Enum):
@@ -54,7 +54,7 @@ class RelationshipExtractor:
             min_confidence: Minimum confidence threshold for relationships
         """
         self.min_confidence = min_confidence
-        self.relationships: Dict[Tuple[str, str], Relationship] = {}
+        self.relationships: dict[tuple[str, str], Relationship] = {}
 
         # Relationship pattern templates
         self.patterns = {
@@ -82,7 +82,7 @@ class RelationshipExtractor:
         # Context window for extracting evidence
         self.context_window = 100  # Characters before/after
 
-    def extract(self, text: str, entities: Optional[List[str]] = None) -> List[Relationship]:
+    def extract(self, text: str, entities: Optional[list[str]] = None) -> list[Relationship]:
         """Extract relationships from text.
 
         Args:
@@ -165,7 +165,7 @@ class RelationshipExtractor:
 
         return min(1.0, confidence)
 
-    def find_relations(self, entity1: str, entity2: str, text: str) -> List[Relationship]:
+    def find_relations(self, entity1: str, entity2: str, text: str) -> list[Relationship]:
         """Find specific relationships between two entities.
 
         Args:
@@ -183,7 +183,7 @@ class RelationshipExtractor:
             or (r.entity_a.lower() == entity2.lower() and r.entity_b.lower() == entity1.lower())
         ]
 
-    def batch_extract(self, texts: List[Tuple[str, Optional[int]]]) -> List[Relationship]:
+    def batch_extract(self, texts: list[tuple[str, Optional[int]]]) -> list[Relationship]:
         """Extract relationships from multiple texts.
 
         Args:
@@ -202,7 +202,7 @@ class RelationshipExtractor:
 
         return self._deduplicate(all_rels)
 
-    def _deduplicate(self, relationships: List[Relationship]) -> List[Relationship]:
+    def _deduplicate(self, relationships: list[Relationship]) -> list[Relationship]:
         """Remove duplicate relationships, keeping highest confidence.
 
         Args:
@@ -211,7 +211,7 @@ class RelationshipExtractor:
         Returns:
             Deduplicated relationships
         """
-        seen: Dict[Tuple[str, str, str], Relationship] = {}
+        seen: dict[tuple[str, str, str], Relationship] = {}
 
         for rel in sorted(relationships, key=lambda r: -r.confidence):
             key = (rel.entity_a.lower(), rel.entity_b.lower(), rel.relation_type.value)
@@ -220,7 +220,7 @@ class RelationshipExtractor:
 
         return list(seen.values())
 
-    def get_related_entities(self, entity: str, relationships: List[Relationship]) -> Dict[RelationType, Set[str]]:
+    def get_related_entities(self, entity: str, relationships: list[Relationship]) -> dict[RelationType, set[str]]:
         """Get all entities related to a given entity.
 
         Args:

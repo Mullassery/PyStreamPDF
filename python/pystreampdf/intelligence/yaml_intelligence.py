@@ -1,8 +1,7 @@
 """YAML content intelligence and correction."""
 
-import re
+
 import yaml
-from typing import Dict, List
 
 from .types import CorrectionSuggestion, IntelligenceResult
 
@@ -37,7 +36,7 @@ class YAMLAnalyzer:
             is_valid = True
         except yaml.YAMLError as e:
             is_valid = False
-            issues.append(f"YAML parse error: {str(e)}")
+            issues.append(f"YAML parse error: {e!s}")
 
             # Attempt correction
             corrected_text, suggestions = self._attempt_correction(text)
@@ -51,13 +50,12 @@ class YAMLAnalyzer:
                 except yaml.YAMLError:
                     parsed = None
 
-        if parsed:
-            # Extract metadata
-            if isinstance(parsed, dict):
-                metadata["key_count"] = len(parsed)
-                metadata["root_keys"] = list(parsed.keys())
-                metadata["has_nested"] = any(isinstance(v, (dict, list)) for v in parsed.values())
-                metadata["has_lists"] = any(isinstance(v, list) for v in parsed.values())
+        # Extract metadata
+        if isinstance(parsed, dict) and parsed:
+            metadata["key_count"] = len(parsed)
+            metadata["root_keys"] = list(parsed.keys())
+            metadata["has_nested"] = any(isinstance(v, (dict, list)) for v in parsed.values())
+            metadata["has_lists"] = any(isinstance(v, list) for v in parsed.values())
 
         confidence = 1.0 if is_valid and not issues else max(0.0, 1.0 - (len(issues) * 0.2))
 
@@ -71,7 +69,7 @@ class YAMLAnalyzer:
             metadata=metadata
         )
 
-    def _attempt_correction(self, text: str) -> tuple[str, List[CorrectionSuggestion]]:
+    def _attempt_correction(self, text: str) -> tuple[str, list[CorrectionSuggestion]]:
         """Attempt to correct common OCR errors."""
         suggestions = []
         corrected = text
