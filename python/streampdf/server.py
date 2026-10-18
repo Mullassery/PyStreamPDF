@@ -6,8 +6,8 @@ from typing import Any, Optional
 class StreamPDFServer:
     """REST API server for document processing workflows."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8003):
-        """Initialize server."""
+    def __init__(self, host: str = "127.0.0.1", port: int = 8003):
+        """Initialize server (defaults to loopback 127.0.0.1)."""
         self.host = host
         self.port = port
         self.documents: dict[str, dict[str, Any]] = {}
@@ -188,8 +188,8 @@ def create_flask_app(server: Optional[StreamPDFServer] = None):
     return app
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8003):
-    """Run the REST API server."""
+def run_server(host: str = "127.0.0.1", port: int = 8003):
+    """Run the REST API server (defaults to loopback 127.0.0.1)."""
     app = create_flask_app()
     app.run(host=host, port=port, debug=False)
 

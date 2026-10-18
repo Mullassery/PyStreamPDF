@@ -36,3 +36,23 @@ class CitationNetwork:
         """Add citation."""
         citation = Citation(source_paper=source, target_paper=target, relation=relation)
         self.citations.append(citation)
+
+    def top_cited(self, limit: int = 3) -> list[str]:
+        """Return formatted labels for the most-cited papers in the network (PYSTREAMPDF-006)."""
+        counts: dict[str, int] = {}
+        for c in self.citations:
+            if c.relation == CitationRelation.CITES:
+                counts[c.target_paper] = counts.get(c.target_paper, 0) + 1
+            elif c.relation == CitationRelation.CITED_BY:
+                counts[c.source_paper] = counts.get(c.source_paper, 0) + 1
+        ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[: max(0, limit)]
+        results: list[str] = []
+        for pid, count in ranked:
+            meta = self.papers.get(pid, {})
+            title = meta.get("title") or pid
+            year = meta.get("year")
+            if year is not None:
+                results.append(f"{title} ({year}, {count} citations)")
+            else:
+                results.append(f"{title} ({count} citations)")
+        return results

@@ -94,6 +94,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.2] - 2026-10-18
+
+### Security
+- Default `StreamPDFServer` / `run_server` bind address to loopback `127.0.0.1` instead of `0.0.0.0` (RECHECK-002).
+
+### Fixed
+- Implement `CitationNetwork.top_cited(limit=...)` in `pystreampdf.semantic.citations` so `ContextAssembler` resolves influential papers without hitting an `AttributeError` fallback (PYSTREAMPDF-006).
+
 ## [2.3.1] - 2026-10-17
 
 ### Fixed
