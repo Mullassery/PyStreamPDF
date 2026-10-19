@@ -17,12 +17,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   using `secrets.compare_digest`, and applies a per-IP token bucket
   (`rate_limit_per_minute`, default 60) before forwarding to DAB. Loopback
   mode is unchanged (no token, no proxy). Covered by
-  `tests/test_mcp_auth.py` with a fake upstream for 401/200/429; TLS or a
+  `tests/test_mcp_auth.py` with a fake upstream for 401/200/429; a
   hardened reverse proxy is still recommended for untrusted networks.
-- The proxy is an application-level boundary only: traffic remains
-  plaintext HTTP and the token is not a substitute for TLS. This is
-  documented in `SECURITY.md` and `README.md` rather than implying the
-  connector is safe to expose directly.
+- Added optional TLS to the remote MCP proxy (C22). `tls_cert`/`tls_key`
+  are accepted by `PDFProcessor.start_mcp_connector` / `_MCPPDFConnector`
+  and the proxy's listening socket is wrapped with a stdlib
+  `ssl.SSLContext` (TLS 1.2 minimum). `tests/test_mcp_tls.py` generates a
+  throwaway self-signed certificate with `cryptography` (added to the
+  `dev` extra), verifies HTTPS with a verifying client context, and
+  confirms that plaintext HTTP to the TLS listener fails. TLS remains
+  optional; without a cert/key the proxy still serves plaintext HTTP.
+- The proxy is an application-level boundary only: without TLS configured,
+  traffic remains plaintext HTTP and the token is not a substitute for
+  TLS. This is documented in `SECURITY.md` and `README.md` rather than
+  implying the connector is safe to expose directly.
 
 ### Added
 
@@ -33,8 +41,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   A real OCR assertion uses the existing `OcrPipeline` and skips when
   Tesseract is unavailable (no mocked/fabricated OCR text). A reportlab
   `Table` with spanning header/summary cells verifies merged-cell text
-  survives extraction. Full suite: 580 passed / 6 skipped (optional
-  dependencies such as Tesseract are skipped when absent).
+  survives extraction.
+- Expanded the generated scanned fixtures (C22) with a mildly rotated
+  (~2 degree) page and a Times-Roman 22 pt page, both rasterized to
+  text-free PDFs with PyMuPDF. Real Tesseract OCR assertions cover the new
+  fixtures and still skip when Tesseract/pytesseract is absent.
+- The remote MCP proxy now streams request and response bodies in 64 KiB
+  chunks instead of buffering them fully in memory. Responses without a
+  `Content-Length` are relayed close-delimited; chunked request bodies are
+  rejected with `501` rather than silently dropped. Covered by large
+  request/response and close-delimited response tests in
+  `tests/test_mcp_auth.py`. Full suite: 589 passed / 8 skipped (optional
+  StatGuardian, PaddleOCR, and Tesseract dependencies are skipped when absent).
 
 ### Fixed
 

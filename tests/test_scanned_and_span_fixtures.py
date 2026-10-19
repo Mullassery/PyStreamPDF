@@ -38,24 +38,74 @@ def _write_two_column_source(path):
     pdf.save()
 
 
+def _rasterize_to_image_only(source, destination, dpi=150):
+    with fitz.open(str(source)) as source_doc:
+        source_page = source_doc[0]
+        pixmap = source_page.get_pixmap(dpi=dpi)
+        image_png = pixmap.tobytes("png")
+        width, height = source_page.rect.width, source_page.rect.height
+
+    with fitz.open() as scanned_doc:
+        scanned_page = scanned_doc.new_page(width=width, height=height)
+        scanned_page.insert_image(scanned_page.rect, stream=image_png)
+        scanned_doc.save(str(destination))
+    return destination
+
+
 @pytest.fixture
 def scanned_multi_column_pdf(tmp_path):
     source = tmp_path / "two-column-source.pdf"
     _write_two_column_source(source)
+    return _rasterize_to_image_only(source, tmp_path / "scanned-two-column.pdf")
 
-    with fitz.open(str(source)) as source_doc:
-        source_page = source_doc[0]
-        pixmap = source_page.get_pixmap(dpi=150)
-        image_png = pixmap.tobytes("png")
-        width, height = source_page.rect.width, source_page.rect.height
 
-    scanned = tmp_path / "scanned-two-column.pdf"
-    with fitz.open() as scanned_doc:
-        scanned_page = scanned_doc.new_page(width=width, height=height)
-        scanned_page.insert_image(scanned_page.rect, stream=image_png)
-        scanned_doc.save(str(scanned))
+def _write_rotated_source(path):
+    pdf = canvas.Canvas(str(path), pagesize=letter)
+    pdf.setTitle("Mildly rotated scanned fixture")
+    pdf.saveState()
+    pdf.translate(306, 396)
+    pdf.rotate(2.0)
+    pdf.translate(-306, -396)
+    pdf.setFont("Helvetica-Bold", 16)
+    lines = [
+        "ROTATED SKEW SAMPLE",
+        "slightly tilted paragraph line",
+        "third tilted line",
+    ]
+    for index, line in enumerate(lines):
+        pdf.drawString(72, 680 - index * 28, line)
+    pdf.restoreState()
+    pdf.showPage()
+    pdf.save()
 
-    return scanned
+
+@pytest.fixture
+def rotated_scanned_pdf(tmp_path):
+    source = tmp_path / "rotated-source.pdf"
+    _write_rotated_source(source)
+    return _rasterize_to_image_only(source, tmp_path / "scanned-rotated.pdf")
+
+
+def _write_serif_source(path):
+    pdf = canvas.Canvas(str(path), pagesize=letter)
+    pdf.setTitle("Serif font scanned fixture")
+    pdf.setFont("Times-Roman", 22)
+    lines = [
+        "SERIF FONT SAMPLE",
+        "Times Roman at twenty two points",
+        "different face and size",
+    ]
+    for index, line in enumerate(lines):
+        pdf.drawString(72, 680 - index * 36, line)
+    pdf.showPage()
+    pdf.save()
+
+
+@pytest.fixture
+def serif_scanned_pdf(tmp_path):
+    source = tmp_path / "serif-source.pdf"
+    _write_serif_source(source)
+    return _rasterize_to_image_only(source, tmp_path / "scanned-serif.pdf")
 
 
 def test_scanned_multicolumn_pdf_is_a_real_image_only_pdf(scanned_multi_column_pdf):
@@ -65,6 +115,18 @@ def test_scanned_multicolumn_pdf_is_a_real_image_only_pdf(scanned_multi_column_p
     assert page.is_likely_scanned is True
 
     with fitz.open(str(scanned_multi_column_pdf)) as source:
+        assert source[0].get_images(full=True)
+
+
+@pytest.mark.parametrize("fixture_name", ["rotated_scanned_pdf", "serif_scanned_pdf"])
+def test_additional_scanned_fixtures_are_image_only(request, fixture_name):
+    path = request.getfixturevalue(fixture_name)
+    page = pystreampdf.open(str(path)).page(1)
+
+    assert page.text.strip() == ""
+    assert page.is_likely_scanned is True
+
+    with fitz.open(str(path)) as source:
         assert source[0].get_images(full=True)
 
 
@@ -95,6 +157,38 @@ def test_ocr_extracts_both_columns_from_rasterized_pdf(scanned_multi_column_pdf)
     normalized = re.sub(r"\s+", " ", pages[0].text).upper()
     assert "LEFT COLUMN ALPHA" in normalized
     assert "RIGHT COLUMN BETA" in normalized
+
+
+@pytest.mark.skipif(
+    not _tesseract_available(),
+    reason="tesseract/pytesseract not installed",
+)
+def test_ocr_reads_mildly_rotated_scanned_pdf(rotated_scanned_pdf):
+    from pystreampdf.ocr import OcrPipeline
+
+    pages = OcrPipeline().process_document(str(rotated_scanned_pdf))
+
+    assert len(pages) == 1
+    assert pages[0].source == "ocr"
+    normalized = re.sub(r"\s+", " ", pages[0].text).upper()
+    assert "ROTATED SKEW SAMPLE" in normalized
+    assert "TILTED" in normalized
+
+
+@pytest.mark.skipif(
+    not _tesseract_available(),
+    reason="tesseract/pytesseract not installed",
+)
+def test_ocr_reads_serif_font_scanned_pdf(serif_scanned_pdf):
+    from pystreampdf.ocr import OcrPipeline
+
+    pages = OcrPipeline().process_document(str(serif_scanned_pdf))
+
+    assert len(pages) == 1
+    assert pages[0].source == "ocr"
+    normalized = re.sub(r"\s+", " ", pages[0].text).upper()
+    assert "SERIF FONT SAMPLE" in normalized
+    assert "TIMES ROMAN" in normalized
 
 
 def _write_table_span_pdf(path):

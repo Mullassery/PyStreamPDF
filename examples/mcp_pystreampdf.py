@@ -3,9 +3,10 @@
 By default the connector binds to 127.0.0.1 with no cross-origin access and
 read-only permissions. To expose it beyond localhost, pass allow_remote=True
 with a non-empty auth_token: DAB stays on loopback and a stdlib reverse proxy
-requires ``Authorization: Bearer <token>`` before forwarding. That proxy still
-speaks plaintext HTTP, so terminate TLS in a real reverse proxy in front of it
-for untrusted networks.
+requires ``Authorization: Bearer <token>`` before forwarding. Pass both
+``tls_cert`` and ``tls_key`` to serve HTTPS directly from that proxy; otherwise
+it speaks plaintext HTTP and needs a TLS-terminating reverse proxy for
+untrusted networks.
 """
 
 import asyncio
@@ -22,6 +23,9 @@ async def main():
     # mcp_url = engine.start_mcp_connector(
     #     host="0.0.0.0", allow_remote=True,
     #     auth_token="replace-with-a-long-random-token",
+    #     # Optional: serve HTTPS directly from the proxy.
+    #     tls_cert="/path/to/server-cert.pem",
+    #     tls_key="/path/to/server-key.pem",
     # )
     mcp_url = engine.start_mcp_connector()
     print(f"✓ PyStreamPDF MCP 2.0 running at {mcp_url}")

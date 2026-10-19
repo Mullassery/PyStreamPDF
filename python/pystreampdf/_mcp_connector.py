@@ -5,8 +5,10 @@ import http.server
 import ipaddress
 import json
 import logging
+import os
 import secrets
 import socket
+import ssl
 import subprocess
 import tempfile
 import threading
@@ -15,6 +17,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+_STREAM_CHUNK_SIZE = 64 * 1024
 
 _HOP_BY_HOP_HEADERS = {
     "connection",
@@ -32,6 +36,34 @@ def _find_free_port(host: str = "127.0.0.1") -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((host, 0))
         return sock.getsockname()[1]
+
+
+def _validate_tls_pair(tls_cert: Optional[str], tls_key: Optional[str]) -> None:
+    if (tls_cert is None) != (tls_key is None):
+        raise ValueError("tls_cert and tls_key must be provided together")
+
+
+def _create_server_ssl_context(tls_cert: str, tls_key: str) -> ssl.SSLContext:
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(certfile=os.fspath(tls_cert), keyfile=os.fspath(tls_key))
+    return context
+
+
+class _LimitedReader:
+    """Stream at most ``remaining`` bytes from an underlying request body."""
+
+    def __init__(self, stream, remaining: int):
+        self._stream = stream
+        self._remaining = remaining
+
+    def read(self, size: int = -1) -> bytes:
+        if self._remaining <= 0:
+            return b""
+        size = self._remaining if size is None or size < 0 else min(size, self._remaining)
+        data = self._stream.read(size)
+        self._remaining -= len(data)
+        return data
 
 
 class _TokenBucket:
@@ -77,7 +109,9 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         logger.debug("%s - %s", self.address_string(), format % args)
 
-    def _send_json(self, status: int, payload: dict[str, Any], extra_headers: Optional[dict] = None):
+    def _send_json(
+        self, status: int, payload: dict[str, Any], extra_headers: Optional[dict] = None
+    ):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -119,19 +153,32 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
         self._forward()
 
     def _forward(self) -> None:
+        if self.headers.get("Transfer-Encoding"):
+            self._send_json(
+                501,
+                {"error": "chunked request bodies are not supported"},
+            )
+            return
+
         length_header = self.headers.get("Content-Length")
         try:
             content_length = int(length_header) if length_header else 0
         except ValueError:
             self._send_json(400, {"error": "invalid Content-Length"})
             return
+        if content_length < 0:
+            self._send_json(400, {"error": "invalid Content-Length"})
+            return
 
-        body = self.rfile.read(content_length) if content_length > 0 else None
+        # Stream request bodies instead of buffering them in memory. HTTPConnection
+        # reads file-like bodies in chunks; _LimitedReader stops at Content-Length
+        # so it never consumes a pipelined request or blocks waiting for EOF.
+        body = _LimitedReader(self.rfile, content_length) if content_length > 0 else None
         forwarded_headers = {
             name: value
             for name, value in self.headers.items()
             if name.lower() not in _HOP_BY_HOP_HEADERS
-            and name.lower() not in {"authorization", "content-length", "host"}
+            and name.lower() not in {"authorization", "host"}
         }
         forwarded_headers["Host"] = f"{self.server.upstream_host}:{self.server.upstream_port}"
         forwarded_headers["Connection"] = "close"
@@ -140,26 +187,38 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
             self.server.upstream_host, self.server.upstream_port, timeout=30
         )
         try:
-            connection.request(self.command, self.path, body=body, headers=forwarded_headers)
-            response = connection.getresponse()
-            data = response.read()
-        except (OSError, http.client.HTTPException) as exc:
-            logger.warning("MCP auth proxy upstream request failed: %s", exc)
-            self._send_json(502, {"error": "upstream unavailable"})
-            return
+            try:
+                connection.request(self.command, self.path, body=body, headers=forwarded_headers)
+                response = connection.getresponse()
+            except (OSError, http.client.HTTPException) as exc:
+                logger.warning("MCP auth proxy upstream request failed: %s", exc)
+                self._send_json(502, {"error": "upstream unavailable"})
+                return
+
+            upstream_length = response.getheader("Content-Length")
+            self.send_response(response.status, response.reason)
+            for name, value in response.getheaders():
+                if name.lower() not in _HOP_BY_HOP_HEADERS and name.lower() != "content-length":
+                    self.send_header(name, value)
+            if upstream_length is not None:
+                self.send_header("Content-Length", upstream_length)
+            self.send_header("Connection", "close")
+            self.end_headers()
+
+            if self.command != "HEAD":
+                try:
+                    while True:
+                        # read1 returns whatever is available, so large responses
+                        # are relayed incrementally instead of being fully buffered.
+                        chunk = response.read1(_STREAM_CHUNK_SIZE)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                except (OSError, http.client.HTTPException) as exc:
+                    logger.warning("MCP auth proxy response stream failed: %s", exc)
         finally:
             connection.close()
-
-        self.send_response(response.status, response.reason)
-        for name, value in response.getheaders():
-            if name.lower() not in _HOP_BY_HOP_HEADERS and name.lower() != "content-length":
-                self.send_header(name, value)
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Connection", "close")
-        self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(data)
-        self.close_connection = True
+            self.close_connection = True
 
     do_GET = _handle
     do_HEAD = _handle
@@ -174,13 +233,30 @@ class _AuthProxyServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, server_address, handler_class, *, auth_token, upstream_host,
-                 upstream_port, limiter):
+    def __init__(
+        self,
+        server_address,
+        handler_class,
+        *,
+        auth_token,
+        upstream_host,
+        upstream_port,
+        limiter,
+        ssl_context=None,
+    ):
         self.auth_token = auth_token
         self.upstream_host = upstream_host
         self.upstream_port = upstream_port
         self.limiter = limiter
+        self.ssl_context = ssl_context
         super().__init__(server_address, handler_class)
+
+    def server_bind(self):
+        super().server_bind()
+        if self.ssl_context is not None:
+            # Wrap the bound/listening socket; accepted connections then perform
+            # the TLS handshake before any HTTP parsing occurs.
+            self.socket = self.ssl_context.wrap_socket(self.socket, server_side=True)
 
 
 class _AuthReverseProxy:
@@ -194,14 +270,19 @@ class _AuthReverseProxy:
         listen_port: int = 0,
         upstream_host: str = "127.0.0.1",
         rate_limit_per_minute: float = 60,
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
     ):
         if not isinstance(auth_token, str) or not auth_token.strip():
             raise ValueError("auth_token must be a non-empty string")
+        _validate_tls_pair(tls_cert, tls_key)
         self.auth_token = auth_token
         self.upstream_host = upstream_host
         self.upstream_port = upstream_port
         self.listen_host = listen_host
         self.listen_port = listen_port
+        self.tls_cert = tls_cert
+        self.tls_key = tls_key
         self.limiter = _TokenBucket(rate_limit_per_minute)
         self._server: Optional[_AuthProxyServer] = None
         self._thread: Optional[threading.Thread] = None
@@ -219,11 +300,15 @@ class _AuthReverseProxy:
             host = "127.0.0.1"
         if ":" in host:
             host = f"[{host}]"
-        return f"http://{host}:{self.port}/mcp"
+        scheme = "https" if self.tls_cert is not None else "http"
+        return f"{scheme}://{host}:{self.port}/mcp"
 
     def start(self) -> str:
         if self._server is not None:
             return self.url
+        ssl_context = None
+        if self.tls_cert is not None:
+            ssl_context = _create_server_ssl_context(self.tls_cert, self.tls_key)
         server = _AuthProxyServer(
             (self.listen_host, self.listen_port),
             _AuthProxyHandler,
@@ -231,6 +316,7 @@ class _AuthReverseProxy:
             upstream_host=self.upstream_host,
             upstream_port=self.upstream_port,
             limiter=self.limiter,
+            ssl_context=ssl_context,
         )
         self._server = server
         self._thread = threading.Thread(
@@ -260,9 +346,11 @@ class _AuthReverseProxy:
         self._server = None
         self._thread = None
 
+
 try:
     from statguardian._mcp_connector import BaseMCPConnector
 except ImportError:
+
     class BaseMCPConnector(ABC):
         def __init__(
             self,
@@ -388,6 +476,8 @@ class PDFProcessor:
         allowed_root: Optional[str] = None,
         auth_token: Optional[str] = None,
         rate_limit_per_minute: Optional[float] = None,
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
     ) -> str:
         """Start the local MCP/DAB connector.
 
@@ -399,9 +489,10 @@ class PDFProcessor:
         binds to ``127.0.0.1`` on an internal port; a small stdlib reverse
         proxy binds the requested ``host``/``port``, requires
         ``Authorization: Bearer <auth_token>`` on every request, and applies a
-        per-IP token bucket (``rate_limit_per_minute``, default 60). This is a
-        useful application-level boundary, not a replacement for TLS or a
-        hardened reverse proxy in front of untrusted networks.
+        per-IP token bucket (``rate_limit_per_minute``, default 60). With
+        ``tls_cert`` and ``tls_key`` the proxy serves HTTPS directly using a
+        stdlib ``ssl.SSLContext``; without them traffic is plaintext HTTP and a
+        TLS-terminating reverse proxy is still required for untrusted networks.
 
         Loopback-only mode is unchanged: no token is required and no proxy is
         started.
@@ -420,6 +511,8 @@ class PDFProcessor:
             allowed_root=allowed_root,
             auth_token=auth_token,
             rate_limit_per_minute=rate_limit_per_minute,
+            tls_cert=tls_cert,
+            tls_key=tls_key,
         )
         return self.mcp_connector.start_mcp_connector()
 
@@ -439,10 +532,11 @@ class _MCPPDFConnector(BaseMCPConnector):
         allowed_root: Optional[str] = None,
         auth_token: Optional[str] = None,
         rate_limit_per_minute: Optional[float] = None,
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
     ):
-        if allow_remote and (
-            not isinstance(auth_token, str) or not auth_token.strip()
-        ):
+        _validate_tls_pair(tls_cert, tls_key)
+        if allow_remote and (not isinstance(auth_token, str) or not auth_token.strip()):
             raise ValueError(
                 "allow_remote=True requires a non-empty auth_token; the remote "
                 "MCP connector is fronted by a bearer-token reverse proxy."
@@ -464,9 +558,9 @@ class _MCPPDFConnector(BaseMCPConnector):
         self.pdf = pdf
         self.allowed_root = allowed_root
         self.auth_token = auth_token
-        self.rate_limit_per_minute = (
-            60 if rate_limit_per_minute is None else rate_limit_per_minute
-        )
+        self.rate_limit_per_minute = 60 if rate_limit_per_minute is None else rate_limit_per_minute
+        self.tls_cert = tls_cert
+        self.tls_key = tls_key
         self.public_host = host
         self.public_port = port
         self._auth_proxy: Optional[_AuthReverseProxy] = None
@@ -480,10 +574,12 @@ class _MCPPDFConnector(BaseMCPConnector):
 
     def get_mcp_tools(self) -> dict[str, Any]:
         from pystreampdf._mcp_tools import PyStreamPDFMCPTools
+
         return PyStreamPDFMCPTools.get_tools()
 
     def get_tool_handlers(self) -> Any:
         from pystreampdf._mcp_tools import PyStreamPDFMCPHandler
+
         return PyStreamPDFMCPHandler(self.pdf, allowed_root=self.allowed_root)
 
     def _generate_dab_config(self, tools: dict[str, Any]) -> dict:
@@ -505,6 +601,8 @@ class _MCPPDFConnector(BaseMCPConnector):
             listen_host=self.public_host,
             listen_port=self.public_port,
             rate_limit_per_minute=self.rate_limit_per_minute,
+            tls_cert=self.tls_cert,
+            tls_key=self.tls_key,
         )
         try:
             proxy.start()

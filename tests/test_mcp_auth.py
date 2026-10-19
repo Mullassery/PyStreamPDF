@@ -24,9 +24,36 @@ TOKEN = "test-bearer-token-0123456789"
 
 class _FakeUpstreamHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/large":
+            body = b"x" * (1024 * 1024)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if self.path == "/no-length":
+            body = b"close-delimited-body"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(body)
+            self.close_connection = True
+            return
+
         body = b"upstream-ok"
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -65,11 +92,11 @@ def proxy(upstream_port):
         instance.stop()
 
 
-def _request(port, authorization=None):
+def _request(port, authorization=None, *, path="/mcp", method="GET", body=None):
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     headers = {} if authorization is None else {"Authorization": authorization}
     try:
-        connection.request("GET", "/mcp", headers=headers)
+        connection.request(method, path, body=body, headers=headers)
         response = connection.getresponse()
         return response.status, response.read(), dict(response.getheaders())
     finally:
@@ -101,6 +128,34 @@ def test_valid_bearer_token_proxies_to_upstream(proxy):
     assert status == 200
     assert body == b"upstream-ok"
     assert headers["Content-Type"] == "text/plain"
+
+
+def test_large_request_body_is_streamed_through_proxy(proxy):
+    payload = b"a" * (1024 * 1024)
+    status, body, _ = _request(
+        proxy.port,
+        f"Bearer {TOKEN}",
+        path="/echo",
+        method="POST",
+        body=payload,
+    )
+    assert status == 200
+    assert body == payload
+
+
+def test_large_response_body_is_relayed(proxy):
+    status, body, headers = _request(proxy.port, f"Bearer {TOKEN}", path="/large")
+    assert status == 200
+    assert body == b"x" * (1024 * 1024)
+    assert headers["Content-Length"] == str(len(body))
+
+
+def test_response_without_content_length_is_close_delimited(proxy):
+    status, body, headers = _request(proxy.port, f"Bearer {TOKEN}", path="/no-length")
+    assert status == 200
+    assert body == b"close-delimited-body"
+    assert "Content-Length" not in headers
+    assert headers["Connection"] == "close"
 
 
 def test_rate_limit_returns_429_per_ip_bucket(upstream_port):

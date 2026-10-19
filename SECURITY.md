@@ -46,11 +46,20 @@ not aspirational security posture.
   `secrets.compare_digest`), and applies a per-IP token bucket
   (`rate_limit_per_minute`, default 60). Covered by
   `tests/test_mcp_auth.py` against a fake upstream (401/200/429).
-  **This application-level token check is not a substitute for TLS or a
-  hardened reverse proxy.** Traffic is plaintext HTTP unless you terminate
-  TLS in front of it; for exposure to untrusted networks, put a real
-  reverse proxy (with TLS, request-size limits, and logging) in front of the
-  connector. Loopback-only mode is unchanged and does not require a token.
+  Supplying both `tls_cert` and `tls_key` makes the proxy serve HTTPS
+  directly via a stdlib `ssl.SSLContext` (TLS 1.2 minimum, no custom cipher
+  list); `tests/test_mcp_tls.py` verifies a self-signed certificate with a
+  verifying client and confirms that plaintext HTTP is rejected. Without
+  those parameters the default remains plaintext HTTP.
+  **The built-in token/TLS boundary is not a hardened reverse proxy.** There
+  is no request-size limit, access logging, mutual TLS, or rate-limit
+  persistence, and TLS certificate rotation is left to the caller. For
+  exposure to untrusted networks, keep a real reverse proxy (with TLS,
+  request-size limits, and logging) in front of the connector.
+  Request and response bodies are streamed in chunks instead of being fully
+  buffered; chunked request bodies are rejected with `501`, so callers must
+  send `Content-Length`. Loopback-only mode is unchanged and does not require
+  a token.
 - **Untrusted PDF input**: this library parses arbitrary PDF files via
   PDFium (a large, C++, memory-unsafe parser embedded via FFI). PDFium has
   had real historical CVEs. This project does not sandbox PDF parsing

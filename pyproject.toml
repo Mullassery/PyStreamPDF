@@ -38,6 +38,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "pytest-timeout>=2.1",
     "reportlab>=4.0",
+    "cryptography>=42.0",
     "tiktoken>=0.5",
 ]
 
