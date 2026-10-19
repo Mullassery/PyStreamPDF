@@ -7,6 +7,7 @@ local fake upstream, so they do not require DAB or any network access.
 from __future__ import annotations
 
 import http.client
+import logging
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -156,6 +157,64 @@ def test_response_without_content_length_is_close_delimited(proxy):
     assert body == b"close-delimited-body"
     assert "Content-Length" not in headers
     assert headers["Connection"] == "close"
+
+
+def test_request_body_over_configured_limit_is_rejected(upstream_port):
+    limited = _AuthReverseProxy(
+        auth_token=TOKEN,
+        upstream_port=upstream_port,
+        listen_host="127.0.0.1",
+        listen_port=0,
+        max_body_bytes=16,
+    )
+    limited.start()
+    try:
+        status, body, _ = _request(
+            limited.port,
+            f"Bearer {TOKEN}",
+            path="/echo",
+            method="POST",
+            body=b"a" * 32,
+        )
+        assert status == 413
+        assert b"request body too large" in body
+
+        status, body, _ = _request(
+            limited.port,
+            f"Bearer {TOKEN}",
+            path="/echo",
+            method="POST",
+            body=b"a" * 8,
+        )
+        assert status == 200
+        assert body == b"a" * 8
+    finally:
+        limited.stop()
+
+
+def test_invalid_max_body_bytes_is_rejected(upstream_port):
+    for invalid in (0, -1, True, 1.5, "1024"):
+        with pytest.raises(ValueError, match="max_body_bytes"):
+            _AuthReverseProxy(
+                auth_token=TOKEN,
+                upstream_port=upstream_port,
+                max_body_bytes=invalid,
+            )
+
+
+def test_access_log_has_method_path_status_remote_without_secrets(proxy, caplog):
+    with caplog.at_level(logging.INFO, logger="pystreampdf._mcp_connector.access"):
+        _request(proxy.port, f"Bearer {TOKEN}", path=f"/mcp?token={TOKEN}")
+        _request(proxy.port)
+
+    access_records = [
+        record for record in caplog.records if record.name == "pystreampdf._mcp_connector.access"
+    ]
+    messages = [record.getMessage() for record in access_records]
+    assert any("GET /mcp 200 127.0.0.1" in message for message in messages)
+    assert any("GET /mcp 401 127.0.0.1" in message for message in messages)
+    assert all(TOKEN not in message for message in messages)
+    assert all("Authorization" not in message for message in messages)
 
 
 def test_rate_limit_returns_429_per_ip_bucket(upstream_port):

@@ -45,10 +45,13 @@ class TesseractProvider(OcrProvider):
 
         try:
             import pytesseract
-            version_str = pytesseract.get_tesseract_version()
+            # pytesseract returns a packaging.version.Version on recent
+            # releases and a plain string on older ones; normalize both.
+            version_str = str(pytesseract.get_tesseract_version())
             # Extract version number (usually "tesseract 4.1.1\n...")
             if version_str:
-                return version_str.split()[1] if len(version_str.split()) > 1 else "unknown"
+                parts = version_str.split()
+                return parts[1] if len(parts) > 1 else version_str
         except OSError as e:
             # pytesseract.TesseractNotFoundError subclasses EnvironmentError
             # (OSError) -- can happen if the tesseract binary disappears

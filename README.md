@@ -71,20 +71,26 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 - **The Rust-backed `pystreampdf.open()` / `load_index()` silently becomes `None`** if the
   compiled `_core` extension is unavailable (e.g. a from-source install without
   `maturin develop`), falling back to the pure-Python path rather than erroring.
-- **Remote MCP exposure is bearer-token protected and supports optional TLS.** The
+- **Remote MCP exposure is bearer-token protected and supports TLS/mTLS.** The
   connector binds to `127.0.0.1` with read-only permissions by default.
   `allow_remote=True` requires a non-empty `auth_token`; DAB stays on loopback and a
   stdlib reverse proxy enforces `Authorization: Bearer <token>` plus a per-IP rate limit
   before forwarding. Pass both `tls_cert` and `tls_key` to serve HTTPS directly from the
-  proxy (stdlib `ssl.SSLContext`, TLS 1.2+); without them traffic is plaintext HTTP. For
-  untrusted networks a hardened reverse proxy with TLS, request-size limits, and logging
-  is still recommended. Request and response bodies are streamed in chunks rather than
-  fully buffered; chunked request bodies are rejected with `501` (see `SECURITY.md`).
+  proxy (stdlib `ssl.SSLContext`, TLS 1.2+); without them traffic is plaintext HTTP. Set
+  `client_ca` (with TLS) to require and verify a client certificate
+  (`ssl.CERT_REQUIRED`). Request bodies over `max_body_bytes` (default 10 MiB) get a
+  `413`, and the proxy writes a basic access log
+  (`pystreampdf._mcp_connector.access`: method/path/status/remote, no auth headers or
+  query strings). Rate-limit buckets are in-memory per process and reset on restart;
+  there is no persistence or cross-worker sharing. For untrusted networks a hardened
+  reverse proxy is still recommended. Request and response bodies are streamed in
+  chunks rather than fully buffered; chunked request bodies are rejected with `501`
+  (see `SECURITY.md`).
 
 ## Project status
 
 **Beta.** Current version **2.3.0** (`Development Status :: 4 - Beta`). The full
-`pytest tests/` suite on this change passes locally — 589 passed / 8 skipped
+`pytest tests/` suite on this change passes locally — 600 passed / 4 skipped
 (optional-dependency skips), and the last confirmed-green CI run reported `cargo test` —
 23 passed / 0 failed across Python 3.10/3.11/3.12. See
 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md) for what is real vs. partial.
@@ -113,6 +119,10 @@ than fail when it is missing.
   (`cl100k_base`) token counts; falls back to the `len(text) / 4` heuristic.
 - **pytest-asyncio** — a dev/test extra only (`pip install "pystreampdf[dev]"`),
   required to run the `tests/test_mcp_tools.py` async tests.
+- **Tesseract + pytesseract + Pillow** — real OCR for scanned PDFs
+  (`brew install tesseract`, `pip install pytesseract pillow`). Or use the OS
+  package manager for Tesseract; the OCR tests run against generated rasterized
+  fixtures and skip with an explicit reason when the binary/package is missing.
 
 ### Optional high-fidelity extraction (Docling)
 
@@ -213,10 +223,12 @@ make test          # cargo test && pytest tests/
 ## Known issues and deferred work
 
 **Blocked / failed:**
-- Linux/Windows wheels, Docling/PyMuPDF benchmark, realistic OCR fixtures.
+- Linux/Windows wheels, Docling/PyMuPDF benchmark.
 
 **Rejected / deferred:**
 - A full PDF RAG platform; Docling owns layout understanding.
+- Persisting/sharing rate-limit buckets across restarts or workers (the proxy keeps
+  them in memory by design; use an external limiter for multi-process deployments).
 
 Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
 

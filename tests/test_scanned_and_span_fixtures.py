@@ -239,3 +239,21 @@ def test_table_spans_keep_all_cell_text(table_span_pdf):
         "$510",
     ]:
         assert expected in normalized
+
+
+@pytest.mark.skipif(
+    not _tesseract_available(),
+    reason="tesseract/pytesseract not installed",
+)
+def test_real_tesseract_ocr_reports_provider_and_word_regions(scanned_multi_column_pdf):
+    from pystreampdf.ocr import OcrPipeline
+
+    pages = OcrPipeline().process_document(str(scanned_multi_column_pdf), provider_name="tesseract")
+
+    result = pages[0].ocr_result
+    assert result is not None
+    assert result.provider_name == "tesseract"
+    assert result.confidence > 0.0
+    assert result.regions
+    words = {region.text.upper() for region in result.regions}
+    assert "COLUMN" in words or any("COLUMN" in word for word in words)

@@ -17,8 +17,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+access_logger = logging.getLogger(f"{__name__}.access")
 
 _STREAM_CHUNK_SIZE = 64 * 1024
+_DEFAULT_MAX_BODY_BYTES = 10 * 1024 * 1024
 
 _HOP_BY_HOP_HEADERS = {
     "connection",
@@ -43,10 +45,25 @@ def _validate_tls_pair(tls_cert: Optional[str], tls_key: Optional[str]) -> None:
         raise ValueError("tls_cert and tls_key must be provided together")
 
 
-def _create_server_ssl_context(tls_cert: str, tls_key: str) -> ssl.SSLContext:
+def _validate_client_ca(
+    tls_cert: Optional[str], tls_key: Optional[str], client_ca: Optional[str]
+) -> None:
+    if client_ca is not None and tls_cert is None:
+        raise ValueError("client_ca requires tls_cert and tls_key")
+
+
+def _create_server_ssl_context(
+    tls_cert: str, tls_key: str, client_ca: Optional[str] = None
+) -> ssl.SSLContext:
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(certfile=os.fspath(tls_cert), keyfile=os.fspath(tls_key))
+    if client_ca is not None:
+        # Mutual TLS: the client must present a certificate chaining to a CA
+        # in the supplied bundle. The handshake fails otherwise, before any
+        # HTTP request is parsed.
+        context.load_verify_locations(cafile=os.fspath(client_ca))
+        context.verify_mode = ssl.CERT_REQUIRED
     return context
 
 
@@ -109,10 +126,24 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         logger.debug("%s - %s", self.address_string(), format % args)
 
+    def _log_access(self) -> None:
+        # Basic access log: method/path/status/remote only. Authorization and
+        # query strings are deliberately excluded so tokens are never logged.
+        status = getattr(self, "_response_status", None)
+        path = self.path.split("?", 1)[0]
+        access_logger.info(
+            "%s %s %s %s",
+            self.command,
+            path,
+            "-" if status is None else status,
+            self.client_address[0],
+        )
+
     def _send_json(
         self, status: int, payload: dict[str, Any], extra_headers: Optional[dict] = None
     ):
         body = json.dumps(payload).encode("utf-8")
+        self._response_status = status
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -135,22 +166,26 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _handle(self) -> None:
-        # Authenticate before rate limiting so unauthenticated callers cannot
-        # exhaust another client's bucket or learn whether a token is valid.
-        if not self._is_authorized():
-            self._send_json(401, {"error": "unauthorized"})
-            return
+        self._response_status = None
+        try:
+            # Authenticate before rate limiting so unauthenticated callers cannot
+            # exhaust another client's bucket or learn whether a token is valid.
+            if not self._is_authorized():
+                self._send_json(401, {"error": "unauthorized"})
+                return
 
-        allowed, retry_after = self.server.limiter.consume(self.client_address[0])
-        if not allowed:
-            self._send_json(
-                429,
-                {"error": "rate limit exceeded"},
-                {"Retry-After": str(max(1, int(retry_after + 0.999)))},
-            )
-            return
+            allowed, retry_after = self.server.limiter.consume(self.client_address[0])
+            if not allowed:
+                self._send_json(
+                    429,
+                    {"error": "rate limit exceeded"},
+                    {"Retry-After": str(max(1, int(retry_after + 0.999)))},
+                )
+                return
 
-        self._forward()
+            self._forward()
+        finally:
+            self._log_access()
 
     def _forward(self) -> None:
         if self.headers.get("Transfer-Encoding"):
@@ -168,6 +203,9 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
             return
         if content_length < 0:
             self._send_json(400, {"error": "invalid Content-Length"})
+            return
+        if content_length > self.server.max_body_bytes:
+            self._send_json(413, {"error": "request body too large"})
             return
 
         # Stream request bodies instead of buffering them in memory. HTTPConnection
@@ -196,6 +234,7 @@ class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             upstream_length = response.getheader("Content-Length")
+            self._response_status = response.status
             self.send_response(response.status, response.reason)
             for name, value in response.getheaders():
                 if name.lower() not in _HOP_BY_HOP_HEADERS and name.lower() != "content-length":
@@ -242,12 +281,14 @@ class _AuthProxyServer(http.server.ThreadingHTTPServer):
         upstream_host,
         upstream_port,
         limiter,
+        max_body_bytes,
         ssl_context=None,
     ):
         self.auth_token = auth_token
         self.upstream_host = upstream_host
         self.upstream_port = upstream_port
         self.limiter = limiter
+        self.max_body_bytes = max_body_bytes
         self.ssl_context = ssl_context
         super().__init__(server_address, handler_class)
 
@@ -272,10 +313,19 @@ class _AuthReverseProxy:
         rate_limit_per_minute: float = 60,
         tls_cert: Optional[str] = None,
         tls_key: Optional[str] = None,
+        client_ca: Optional[str] = None,
+        max_body_bytes: int = _DEFAULT_MAX_BODY_BYTES,
     ):
         if not isinstance(auth_token, str) or not auth_token.strip():
             raise ValueError("auth_token must be a non-empty string")
         _validate_tls_pair(tls_cert, tls_key)
+        _validate_client_ca(tls_cert, tls_key, client_ca)
+        if (
+            isinstance(max_body_bytes, bool)
+            or not isinstance(max_body_bytes, int)
+            or max_body_bytes <= 0
+        ):
+            raise ValueError("max_body_bytes must be a positive integer")
         self.auth_token = auth_token
         self.upstream_host = upstream_host
         self.upstream_port = upstream_port
@@ -283,6 +333,8 @@ class _AuthReverseProxy:
         self.listen_port = listen_port
         self.tls_cert = tls_cert
         self.tls_key = tls_key
+        self.client_ca = client_ca
+        self.max_body_bytes = max_body_bytes
         self.limiter = _TokenBucket(rate_limit_per_minute)
         self._server: Optional[_AuthProxyServer] = None
         self._thread: Optional[threading.Thread] = None
@@ -308,7 +360,7 @@ class _AuthReverseProxy:
             return self.url
         ssl_context = None
         if self.tls_cert is not None:
-            ssl_context = _create_server_ssl_context(self.tls_cert, self.tls_key)
+            ssl_context = _create_server_ssl_context(self.tls_cert, self.tls_key, self.client_ca)
         server = _AuthProxyServer(
             (self.listen_host, self.listen_port),
             _AuthProxyHandler,
@@ -316,6 +368,7 @@ class _AuthReverseProxy:
             upstream_host=self.upstream_host,
             upstream_port=self.upstream_port,
             limiter=self.limiter,
+            max_body_bytes=self.max_body_bytes,
             ssl_context=ssl_context,
         )
         self._server = server
@@ -478,6 +531,8 @@ class PDFProcessor:
         rate_limit_per_minute: Optional[float] = None,
         tls_cert: Optional[str] = None,
         tls_key: Optional[str] = None,
+        client_ca: Optional[str] = None,
+        max_body_bytes: Optional[int] = None,
     ) -> str:
         """Start the local MCP/DAB connector.
 
@@ -493,6 +548,14 @@ class PDFProcessor:
         ``tls_cert`` and ``tls_key`` the proxy serves HTTPS directly using a
         stdlib ``ssl.SSLContext``; without them traffic is plaintext HTTP and a
         TLS-terminating reverse proxy is still required for untrusted networks.
+
+        ``client_ca`` enables mutual TLS: when set, the proxy requires and
+        verifies a client certificate chaining to that CA bundle
+        (``ssl.CERT_REQUIRED``). It therefore requires ``tls_cert`` and
+        ``tls_key`` too. ``max_body_bytes`` caps accepted request bodies
+        (default 10 MiB); larger requests are rejected with ``413``. The proxy
+        emits a basic access log (method/path/status/remote) through the
+        ``pystreampdf._mcp_connector.access`` logger.
 
         Loopback-only mode is unchanged: no token is required and no proxy is
         started.
@@ -513,6 +576,8 @@ class PDFProcessor:
             rate_limit_per_minute=rate_limit_per_minute,
             tls_cert=tls_cert,
             tls_key=tls_key,
+            client_ca=client_ca,
+            max_body_bytes=max_body_bytes,
         )
         return self.mcp_connector.start_mcp_connector()
 
@@ -534,8 +599,11 @@ class _MCPPDFConnector(BaseMCPConnector):
         rate_limit_per_minute: Optional[float] = None,
         tls_cert: Optional[str] = None,
         tls_key: Optional[str] = None,
+        client_ca: Optional[str] = None,
+        max_body_bytes: Optional[int] = None,
     ):
         _validate_tls_pair(tls_cert, tls_key)
+        _validate_client_ca(tls_cert, tls_key, client_ca)
         if allow_remote and (not isinstance(auth_token, str) or not auth_token.strip()):
             raise ValueError(
                 "allow_remote=True requires a non-empty auth_token; the remote "
@@ -547,6 +615,12 @@ class _MCPPDFConnector(BaseMCPConnector):
             or rate_limit_per_minute <= 0
         ):
             raise ValueError("rate_limit_per_minute must be a positive number")
+        if max_body_bytes is not None and (
+            isinstance(max_body_bytes, bool)
+            or not isinstance(max_body_bytes, int)
+            or max_body_bytes <= 0
+        ):
+            raise ValueError("max_body_bytes must be a positive integer")
 
         super().__init__(
             "PyStreamPDF",
@@ -561,6 +635,8 @@ class _MCPPDFConnector(BaseMCPConnector):
         self.rate_limit_per_minute = 60 if rate_limit_per_minute is None else rate_limit_per_minute
         self.tls_cert = tls_cert
         self.tls_key = tls_key
+        self.client_ca = client_ca
+        self.max_body_bytes = _DEFAULT_MAX_BODY_BYTES if max_body_bytes is None else max_body_bytes
         self.public_host = host
         self.public_port = port
         self._auth_proxy: Optional[_AuthReverseProxy] = None
@@ -603,6 +679,8 @@ class _MCPPDFConnector(BaseMCPConnector):
             rate_limit_per_minute=self.rate_limit_per_minute,
             tls_cert=self.tls_cert,
             tls_key=self.tls_key,
+            client_ca=self.client_ca,
+            max_body_bytes=self.max_body_bytes,
         )
         try:
             proxy.start()

@@ -51,15 +51,33 @@ not aspirational security posture.
   list); `tests/test_mcp_tls.py` verifies a self-signed certificate with a
   verifying client and confirms that plaintext HTTP is rejected. Without
   those parameters the default remains plaintext HTTP.
-  **The built-in token/TLS boundary is not a hardened reverse proxy.** There
-  is no request-size limit, access logging, mutual TLS, or rate-limit
-  persistence, and TLS certificate rotation is left to the caller. For
-  exposure to untrusted networks, keep a real reverse proxy (with TLS,
-  request-size limits, and logging) in front of the connector.
-  Request and response bodies are streamed in chunks instead of being fully
-  buffered; chunked request bodies are rejected with `501`, so callers must
-  send `Content-Length`. Loopback-only mode is unchanged and does not require
-  a token.
+  Setting `client_ca` (which requires `tls_cert`/`tls_key`) enables mutual
+  TLS: the proxy loads that CA bundle and sets `ssl.CERT_REQUIRED`, so a
+  client without a certificate chaining to one of those CAs fails the TLS
+  handshake before any HTTP request is parsed. `tests/test_mcp_tls.py`
+  generates a CA plus server and client certificates with `cryptography` and
+  asserts that an unauthenticated client is rejected while a client signed by
+  the CA succeeds.
+  Request bodies larger than `max_body_bytes` (default 10 MiB) are rejected
+  with `413` before forwarding. The limit is enforced from
+  `Content-Length`; chunked request bodies are rejected with `501`, so the
+  proxy does not buffer an unbounded body. Request and response bodies are
+  streamed in chunks instead of being fully buffered.
+  The proxy emits a basic access log through the
+  `pystreampdf._mcp_connector.access` logger containing only method, path
+  (query string stripped), status, and remote address. It never logs
+  `Authorization` headers, tokens, or request bodies. Applications must
+  configure logging levels/destinations themselves; by default the access
+  logger follows normal Python logging rules and may be silent.
+  **The built-in token/TLS boundary is not a hardened reverse proxy.** Rate
+  limit buckets are in-memory, per proxy process, and reset on restart; they
+  are not shared across workers or hosts, so a restart briefly restores full
+  capacity and horizontal replicas each get their own bucket. TLS certificate
+  rotation, structured/centralized access logs, and denial-of-service
+  hardening are left to the caller. For exposure to untrusted networks, keep
+  a real reverse proxy (with TLS, request-size limits, and logging) in front
+  of the connector. Loopback-only mode is unchanged and does not require a
+  token.
 - **Untrusted PDF input**: this library parses arbitrary PDF files via
   PDFium (a large, C++, memory-unsafe parser embedded via FFI). PDFium has
   had real historical CVEs. This project does not sandbox PDF parsing

@@ -27,6 +27,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `dev` extra), verifies HTTPS with a verifying client context, and
   confirms that plaintext HTTP to the TLS listener fails. TLS remains
   optional; without a cert/key the proxy still serves plaintext HTTP.
+- Added optional mutual TLS to the remote MCP proxy (C22). `client_ca` is
+  accepted by `PDFProcessor.start_mcp_connector`, `_MCPPDFConnector`, and
+  `_AuthReverseProxy`; when set (requires `tls_cert`/`tls_key`) the server
+  context loads the CA bundle and sets `ssl.CERT_REQUIRED`.
+  `tests/test_mcp_tls.py` generates a CA plus server/client certificates
+  with `cryptography` and asserts that a client without a certificate fails
+  the handshake while a correctly signed client succeeds.
+- Added a configurable request-body limit to the proxy (`max_body_bytes`,
+  default 10 MiB). Oversized `Content-Length` requests are rejected with
+  `413` before forwarding; chunked bodies remain rejected with `501`.
+  Covered by `tests/test_mcp_auth.py`.
+- Added basic access logging to the proxy via the
+  `pystreampdf._mcp_connector.access` logger: method, path (query string
+  stripped), status, and remote address only. Authorization headers,
+  tokens, and bodies are not logged. Covered by `tests/test_mcp_auth.py`.
+- Documented that rate-limit buckets remain in-memory per proxy process
+  and do not persist across restarts or workers. Persistence was not
+  implemented; use an external limiter for multi-process deployments.
 - The proxy is an application-level boundary only: without TLS configured,
   traffic remains plaintext HTTP and the token is not a substitute for
   TLS. This is documented in `SECURITY.md` and `README.md` rather than
@@ -42,6 +60,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Tesseract is unavailable (no mocked/fabricated OCR text). A reportlab
   `Table` with spanning header/summary cells verifies merged-cell text
   survives extraction.
+- Added a real Tesseract OCR test against the generated scanned fixtures.
+  `tests/test_scanned_and_span_fixtures.py` now asserts the OCR result
+  reports `provider_name == "tesseract"`, positive confidence, and real word
+  regions in addition to the extracted column text. `tests/test_ocr_tesseract.py`
+  now runs a provider-level extraction against a generated image instead of
+  being unconditionally skipped. Both skip only when Tesseract/pytesseract are
+  absent; no OCR output is mocked. Locally verified with Homebrew Tesseract
+  5.5.3.
 - Expanded the generated scanned fixtures (C22) with a mildly rotated
   (~2 degree) page and a Times-Roman 22 pt page, both rasterized to
   text-free PDFs with PyMuPDF. Real Tesseract OCR assertions cover the new
@@ -51,11 +77,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Content-Length` are relayed close-delimited; chunked request bodies are
   rejected with `501` rather than silently dropped. Covered by large
   request/response and close-delimited response tests in
-  `tests/test_mcp_auth.py`. Full suite: 589 passed / 8 skipped (optional
-  StatGuardian, PaddleOCR, and Tesseract dependencies are skipped when absent).
+  `tests/test_mcp_auth.py`. Full suite: 600 passed / 4 skipped locally
+  (optional StatGuardian, PaddleOCR, and Tesseract dependencies are skipped
+  when absent).
 
 ### Fixed
 
+- `TesseractProvider.version` now handles pytesseract releases that return a
+  `packaging.version.Version` object (rather than a string) instead of raising
+  `AttributeError`. Found by the newly enabled real-Tesseract tests.
 - The MCP connector now uses StatGuardian's canonical
   `_mcp_connector.BaseMCPConnector` when StatGuardian is installed, instead
   of silently keeping the local fallback. The fallback is retained for older

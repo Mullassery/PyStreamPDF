@@ -40,6 +40,8 @@ dev = [
     "reportlab>=4.0",
     "cryptography>=42.0",
     "tiktoken>=0.5",
+    "pytesseract>=0.3",
+    "pillow>=10.0",
 ]
 
 [project.scripts]

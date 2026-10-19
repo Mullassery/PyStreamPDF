@@ -2,8 +2,7 @@
 Tests for TesseractProvider.
 """
 
-import sys
-sys.path.insert(0, '/Users/georgimullassery/PyStreamPDF/python')
+import io
 
 import pytest
 
@@ -15,6 +14,7 @@ class TestTesseractProvider:
         """TesseractProvider can be imported."""
         try:
             from pystreampdf.ocr.providers.tesseract import TesseractProvider
+
             assert TesseractProvider is not None
         except ImportError:
             pytest.skip("TesseractProvider not available")
@@ -55,8 +55,8 @@ class TestTesseractProvider:
     def test_tesseract_provider_capabilities(self):
         """TesseractProvider exposes capabilities."""
         try:
-            from pystreampdf.ocr.providers.tesseract import TesseractProvider
             from pystreampdf.ocr import OcrCapabilities
+            from pystreampdf.ocr.providers.tesseract import TesseractProvider
 
             provider = TesseractProvider()
             caps = provider.capabilities
@@ -99,6 +99,7 @@ class TestTesseractProvider:
             # Check if pytesseract is available
             try:
                 import pytesseract  # noqa: F401
+
                 pytesseract_available = True
             except ImportError:
                 pytesseract_available = False
@@ -131,42 +132,49 @@ class TestTesseractProvider:
             pytest.skip("TesseractProvider not available")
 
 
+def _tesseract_available():
+    try:
+        from pystreampdf.ocr.providers.tesseract import TesseractProvider
+    except ImportError:
+        return False
+    try:
+        return TesseractProvider().is_available()
+    except Exception:
+        return False
+
+
 class TestTesseractProviderIntegration:
     """Integration tests for TesseractProvider (skip if tesseract not installed)."""
 
     @pytest.mark.skipif(
-        True,  # Skip by default since tesseract requires system binary
-        reason="Tesseract system dependency not always available in CI"
+        not _tesseract_available(),
+        reason="tesseract/pytesseract not installed",
     )
     def test_tesseract_extract_minimal_image(self):
-        """TesseractProvider can extract from minimal test image."""
+        """TesseractProvider extracts real text from a generated image."""
+        from PIL import Image, ImageDraw, ImageFont
+
+        from pystreampdf.ocr.providers.tesseract import TesseractProvider
+
+        provider = TesseractProvider()
+
+        img = Image.new("RGB", (480, 160), color="white")
+        draw = ImageDraw.Draw(img)
         try:
-            from pystreampdf.ocr.providers.tesseract import TesseractProvider
-            import io
-            from PIL import Image, ImageDraw
+            font = ImageFont.load_default(size=36)
+        except TypeError:  # Pillow < 10.1 has no size argument
+            font = ImageFont.load_default()
+        draw.text((20, 40), "Hello World", fill="black", font=font)
 
-            provider = TesseractProvider()
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format="PNG")
+        image_data = img_bytes.getvalue()
 
-            if not provider.is_available():
-                pytest.skip("Tesseract not installed")
+        result = provider.extract(image_data, page_number=1)
 
-            # Create minimal test image with text
-            img = Image.new("RGB", (200, 100), color="white")
-            draw = ImageDraw.Draw(img)
-            draw.text((10, 10), "Hello World", fill="black")
-
-            # Save to bytes
-            img_bytes = io.BytesIO()
-            img.save(img_bytes, format="PNG")
-            image_data = img_bytes.getvalue()
-
-            # Extract
-            result = provider.extract(image_data, page_number=1)
-
-            assert result.text is not None
-            assert result.confidence >= 0.0
-            assert result.provider_name == "tesseract"
-            assert result.page_number == 1
-
-        except ImportError:
-            pytest.skip("TesseractProvider or dependencies not available")
+        assert result.provider_name == "tesseract"
+        assert result.page_number == 1
+        assert "HELLO" in result.text.upper()
+        assert "WORLD" in result.text.upper()
+        assert result.confidence > 0.0
+        assert result.regions
