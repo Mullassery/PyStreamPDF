@@ -1,5 +1,6 @@
 """MCP Connector for PyStreamPDF - PDF Document Processing"""
 
+import ipaddress
 import json
 import logging
 import subprocess
@@ -23,15 +24,21 @@ except ImportError:
         ):
             self.project_name = project_name
             self.port = port
-            # Secure-by-default: bind to loopback only. Binding to all interfaces
-            # (e.g. "0.0.0.0") requires an explicit opt-in via `allow_remote=True`,
-            # since this connector has no authentication of its own.
-            if host in ("0.0.0.0", "::") and not allow_remote:
-                raise ValueError(
-                    "Binding the MCP/DAB connector to all interfaces "
-                    f"(host={host!r}) requires allow_remote=True. By default the "
-                    "connector only binds to 127.0.0.1."
-                )
+            # Secure-by-default: bind to loopback only. Any non-loopback host
+            # (e.g. "0.0.0.0") requires an explicit opt-in via
+            # `allow_remote=True`, since this connector has no authentication
+            # of its own.
+            if not allow_remote:
+                try:
+                    is_loopback = ipaddress.ip_address(host).is_loopback
+                except ValueError:
+                    is_loopback = host == "localhost"
+                if not is_loopback:
+                    raise ValueError(
+                        "Binding the MCP/DAB connector to a non-loopback host "
+                        f"(host={host!r}) requires allow_remote=True. By default the "
+                        "connector only binds to 127.0.0.1."
+                    )
             self.host = host
             self.allow_remote = allow_remote
             # CORS defaults to no cross-origin access; wildcard origins must be

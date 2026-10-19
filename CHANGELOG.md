@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The MCP connector now uses StatGuardian's canonical
+  `_mcp_connector.BaseMCPConnector` when StatGuardian is installed, instead
+  of silently keeping the local fallback. The fallback is retained for older
+  installs and now also requires `allow_remote=True` for any non-loopback
+  host (previously only `0.0.0.0`/`::`). Verified by
+  `tests/test_mcp_shared_base.py`.
 - `python/pystreampdf/validation/__init__.py` imported `OcrTable` twice --
   once (redundantly) via `from .table import OcrTable, TableValidator` and
   again via `from .types import (OcrTable, ...)`. Both names resolved to the

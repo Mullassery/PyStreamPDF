@@ -59,8 +59,11 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 - **No realistic OCR/layout test fixtures yet.** The OCR and table-validation code is real
   and unit-tested, but tests use synthetic images and mocks — no true multi-column layout
   or realistic scanned-document fixtures.
-- **Cross-project integration is asserted, not demonstrated.** Nothing in this repo
-  imports from or is imported by StatGuardian, PyInferenceManager, or PyStreamMCP.
+- **Cross-project integration is limited but real.** The MCP connector imports the
+  canonical `BaseMCPConnector` from `statguardian._mcp_connector` when StatGuardian is
+  installed (with a local fallback for older installs), verified by
+  `tests/test_mcp_shared_base.py`. No other StatGuardian, PyInferenceManager, or
+  PyStreamMCP integration is demonstrated here.
 - **The Rust-backed `pystreampdf.open()` / `load_index()` silently becomes `None`** if the
   compiled `_core` extension is unavailable (e.g. a from-source install without
   `maturin develop`), falling back to the pure-Python path rather than erroring.

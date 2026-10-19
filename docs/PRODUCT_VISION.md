@@ -67,11 +67,12 @@ CI from infra bugs).
   table-validation code is real and unit-tested, but `tests/` only
   contains synthetic single-glyph images and mocks — no true multi-column
   layout or realistic scanned-document fixtures.
-- **Cross-project integration is asserted, not demonstrated.** Nothing in
-  this repo imports from or is imported by StatGuardian,
-  PyInferenceManager, or PyStreamMCP. If those integrations are a real
-  goal, they should be verified against those repos' code before being
-  called dependencies here.
+- **Cross-project integration is limited but real.** The MCP connector
+  imports the canonical `BaseMCPConnector` from
+  `statguardian._mcp_connector` when StatGuardian is installed, with a
+  local fallback for older installs; `tests/test_mcp_shared_base.py`
+  verifies the shared class is used. No other StatGuardian,
+  PyInferenceManager, or PyStreamMCP integration is demonstrated here.
 - **The MCP handler rewire (`39f7c8c`) is new** and so far only
   unit-tested — it hasn't accumulated real invocation history yet.
 
