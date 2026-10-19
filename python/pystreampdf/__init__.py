@@ -7,12 +7,28 @@ Savings" section rather than relying on a fixed multiplier here.
 
 __version__ = "2.3.2"  # Real MCP tool implementations (extract/OCR/validate/etc.), previously all hardcoded fixture data
 
-# Optional: Rust core bindings (requires maturin build)
+# Optional: Rust core bindings (requires maturin build). If the extension is
+# missing, the Python package still imports, but the Rust-backed API must fail
+# loudly and actionably instead of surfacing `TypeError: 'NoneType' is not
+# callable` at the call site.
 try:
     from pystreampdf._core import load_index, open
+
+    HAS_RUST_CORE = True
 except ImportError:
-    open = None
-    load_index = None
+    HAS_RUST_CORE = False
+
+    _CORE_HELP = (
+        "PyStreamPDF's Rust core is unavailable. Build it with "
+        "`maturin develop --release` (or install a wheel that includes the "
+        "compiled extension)."
+    )
+
+    def open(*args, **kwargs):  # type: ignore[no-redef]
+        raise ImportError(_CORE_HELP)
+
+    def load_index(*args, **kwargs):  # type: ignore[no-redef]
+        raise ImportError(_CORE_HELP)
 
 # Python extraction and parsing modules
 from .cache import CachedDocument, PDFCache
