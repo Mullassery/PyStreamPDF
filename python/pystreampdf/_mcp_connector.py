@@ -1,14 +1,264 @@
 """MCP Connector for PyStreamPDF - PDF Document Processing"""
 
+import http.client
+import http.server
 import ipaddress
 import json
 import logging
+import secrets
+import socket
 import subprocess
 import tempfile
+import threading
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+_HOP_BY_HOP_HEADERS = {
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailers",
+    "transfer-encoding",
+    "upgrade",
+}
+
+
+def _find_free_port(host: str = "127.0.0.1") -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return sock.getsockname()[1]
+
+
+class _TokenBucket:
+    """Thread-safe per-key token bucket used for per-IP rate limiting."""
+
+    def __init__(self, rate_per_minute: float):
+        if isinstance(rate_per_minute, bool) or not isinstance(rate_per_minute, (int, float)):
+            raise ValueError("rate_limit_per_minute must be a positive number")
+        if rate_per_minute <= 0:
+            raise ValueError("rate_limit_per_minute must be greater than zero")
+        self.rate_per_minute = float(rate_per_minute)
+        self.capacity = float(rate_per_minute)
+        self._tokens: dict[str, float] = {}
+        self._updated: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def consume(self, key: str) -> tuple[bool, float]:
+        """Consume one token for ``key``.
+
+        Returns ``(allowed, retry_after_seconds)``. ``retry_after_seconds`` is
+        zero when the request is allowed.
+        """
+        now = time.monotonic()
+        refill_per_second = self.rate_per_minute / 60.0
+        with self._lock:
+            tokens = self._tokens.get(key, self.capacity)
+            last = self._updated.get(key, now)
+            tokens = min(self.capacity, tokens + (now - last) * refill_per_second)
+            self._updated[key] = now
+            if tokens >= 1.0:
+                self._tokens[key] = tokens - 1.0
+                return True, 0.0
+            self._tokens[key] = tokens
+            return False, (1.0 - tokens) / refill_per_second
+
+
+class _AuthProxyHandler(http.server.BaseHTTPRequestHandler):
+    """Bearer-token + rate-limited reverse proxy to the loopback DAB server."""
+
+    protocol_version = "HTTP/1.1"
+    server_version = "PyStreamPDFAuthProxy/1.0"
+
+    def log_message(self, format: str, *args: Any) -> None:
+        logger.debug("%s - %s", self.address_string(), format % args)
+
+    def _send_json(self, status: int, payload: dict[str, Any], extra_headers: Optional[dict] = None):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+        self.close_connection = True
+
+    def _is_authorized(self) -> bool:
+        header = self.headers.get("Authorization", "")
+        scheme, separator, token = header.partition(" ")
+        if not separator or scheme.lower() != "bearer":
+            return False
+        return secrets.compare_digest(
+            token.strip().encode("utf-8"),
+            self.server.auth_token.encode("utf-8"),
+        )
+
+    def _handle(self) -> None:
+        # Authenticate before rate limiting so unauthenticated callers cannot
+        # exhaust another client's bucket or learn whether a token is valid.
+        if not self._is_authorized():
+            self._send_json(401, {"error": "unauthorized"})
+            return
+
+        allowed, retry_after = self.server.limiter.consume(self.client_address[0])
+        if not allowed:
+            self._send_json(
+                429,
+                {"error": "rate limit exceeded"},
+                {"Retry-After": str(max(1, int(retry_after + 0.999)))},
+            )
+            return
+
+        self._forward()
+
+    def _forward(self) -> None:
+        length_header = self.headers.get("Content-Length")
+        try:
+            content_length = int(length_header) if length_header else 0
+        except ValueError:
+            self._send_json(400, {"error": "invalid Content-Length"})
+            return
+
+        body = self.rfile.read(content_length) if content_length > 0 else None
+        forwarded_headers = {
+            name: value
+            for name, value in self.headers.items()
+            if name.lower() not in _HOP_BY_HOP_HEADERS
+            and name.lower() not in {"authorization", "content-length", "host"}
+        }
+        forwarded_headers["Host"] = f"{self.server.upstream_host}:{self.server.upstream_port}"
+        forwarded_headers["Connection"] = "close"
+
+        connection = http.client.HTTPConnection(
+            self.server.upstream_host, self.server.upstream_port, timeout=30
+        )
+        try:
+            connection.request(self.command, self.path, body=body, headers=forwarded_headers)
+            response = connection.getresponse()
+            data = response.read()
+        except (OSError, http.client.HTTPException) as exc:
+            logger.warning("MCP auth proxy upstream request failed: %s", exc)
+            self._send_json(502, {"error": "upstream unavailable"})
+            return
+        finally:
+            connection.close()
+
+        self.send_response(response.status, response.reason)
+        for name, value in response.getheaders():
+            if name.lower() not in _HOP_BY_HOP_HEADERS and name.lower() != "content-length":
+                self.send_header(name, value)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(data)
+        self.close_connection = True
+
+    do_GET = _handle
+    do_HEAD = _handle
+    do_POST = _handle
+    do_PUT = _handle
+    do_PATCH = _handle
+    do_DELETE = _handle
+    do_OPTIONS = _handle
+
+
+class _AuthProxyServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self, server_address, handler_class, *, auth_token, upstream_host,
+                 upstream_port, limiter):
+        self.auth_token = auth_token
+        self.upstream_host = upstream_host
+        self.upstream_port = upstream_port
+        self.limiter = limiter
+        super().__init__(server_address, handler_class)
+
+
+class _AuthReverseProxy:
+    """Small stdlib reverse proxy that fronts DAB with bearer auth + rate limits."""
+
+    def __init__(
+        self,
+        auth_token: str,
+        upstream_port: int,
+        listen_host: str = "127.0.0.1",
+        listen_port: int = 0,
+        upstream_host: str = "127.0.0.1",
+        rate_limit_per_minute: float = 60,
+    ):
+        if not isinstance(auth_token, str) or not auth_token.strip():
+            raise ValueError("auth_token must be a non-empty string")
+        self.auth_token = auth_token
+        self.upstream_host = upstream_host
+        self.upstream_port = upstream_port
+        self.listen_host = listen_host
+        self.listen_port = listen_port
+        self.limiter = _TokenBucket(rate_limit_per_minute)
+        self._server: Optional[_AuthProxyServer] = None
+        self._thread: Optional[threading.Thread] = None
+
+    @property
+    def port(self) -> int:
+        if self._server is None:
+            return self.listen_port
+        return self._server.server_address[1]
+
+    @property
+    def url(self) -> str:
+        host = self.listen_host
+        if host in {"0.0.0.0", "::"}:
+            host = "127.0.0.1"
+        if ":" in host:
+            host = f"[{host}]"
+        return f"http://{host}:{self.port}/mcp"
+
+    def start(self) -> str:
+        if self._server is not None:
+            return self.url
+        server = _AuthProxyServer(
+            (self.listen_host, self.listen_port),
+            _AuthProxyHandler,
+            auth_token=self.auth_token,
+            upstream_host=self.upstream_host,
+            upstream_port=self.upstream_port,
+            limiter=self.limiter,
+        )
+        self._server = server
+        self._thread = threading.Thread(
+            target=server.serve_forever,
+            kwargs={"poll_interval": 0.05},
+            name="pystreampdf-mcp-auth-proxy",
+            daemon=True,
+        )
+        try:
+            self._thread.start()
+        except Exception:
+            server.server_close()
+            self._server = None
+            self._thread = None
+            raise
+        logger.info("MCP auth proxy listening on %s", self.url)
+        return self.url
+
+    def stop(self) -> None:
+        server = self._server
+        if server is None:
+            return
+        server.shutdown()
+        server.server_close()
+        if self._thread is not None:
+            self._thread.join(timeout=5)
+        self._server = None
+        self._thread = None
 
 try:
     from statguardian._mcp_connector import BaseMCPConnector
@@ -26,8 +276,8 @@ except ImportError:
             self.port = port
             # Secure-by-default: bind to loopback only. Any non-loopback host
             # (e.g. "0.0.0.0") requires an explicit opt-in via
-            # `allow_remote=True`, since this connector has no authentication
-            # of its own.
+            # `allow_remote=True`. PyStreamPDF's connector additionally
+            # requires an auth_token and fronts DAB with a bearer-auth proxy.
             if not allow_remote:
                 try:
                     is_loopback = ipaddress.ip_address(host).is_loopback
@@ -136,14 +386,25 @@ class PDFProcessor:
         allow_remote: bool = False,
         cors_origins: Optional[list] = None,
         allowed_root: Optional[str] = None,
+        auth_token: Optional[str] = None,
+        rate_limit_per_minute: Optional[float] = None,
     ) -> str:
         """Start the local MCP/DAB connector.
 
         Binds to 127.0.0.1 with no cross-origin access by default. Pass
         ``allow_remote=True`` (and optionally an explicit ``host`` /
-        ``cors_origins``) to expose the connector beyond localhost — this
-        connector has no authentication of its own, so widening exposure is
-        an explicit, deliberate choice for the caller.
+        ``cors_origins``) to expose the connector beyond localhost.
+
+        Remote exposure requires a non-empty ``auth_token``. DAB itself still
+        binds to ``127.0.0.1`` on an internal port; a small stdlib reverse
+        proxy binds the requested ``host``/``port``, requires
+        ``Authorization: Bearer <auth_token>`` on every request, and applies a
+        per-IP token bucket (``rate_limit_per_minute``, default 60). This is a
+        useful application-level boundary, not a replacement for TLS or a
+        hardened reverse proxy in front of untrusted networks.
+
+        Loopback-only mode is unchanged: no token is required and no proxy is
+        started.
 
         ``allowed_root`` restricts every MCP tool's ``pdf_path`` to that
         directory (resolved, symlink-aware). Without it, paths are not
@@ -157,6 +418,8 @@ class PDFProcessor:
             allow_remote=allow_remote,
             cors_origins=cors_origins,
             allowed_root=allowed_root,
+            auth_token=auth_token,
+            rate_limit_per_minute=rate_limit_per_minute,
         )
         return self.mcp_connector.start_mcp_connector()
 
@@ -174,7 +437,23 @@ class _MCPPDFConnector(BaseMCPConnector):
         allow_remote: bool = False,
         cors_origins: Optional[list] = None,
         allowed_root: Optional[str] = None,
+        auth_token: Optional[str] = None,
+        rate_limit_per_minute: Optional[float] = None,
     ):
+        if allow_remote and (
+            not isinstance(auth_token, str) or not auth_token.strip()
+        ):
+            raise ValueError(
+                "allow_remote=True requires a non-empty auth_token; the remote "
+                "MCP connector is fronted by a bearer-token reverse proxy."
+            )
+        if rate_limit_per_minute is not None and (
+            isinstance(rate_limit_per_minute, bool)
+            or not isinstance(rate_limit_per_minute, (int, float))
+            or rate_limit_per_minute <= 0
+        ):
+            raise ValueError("rate_limit_per_minute must be a positive number")
+
         super().__init__(
             "PyStreamPDF",
             port=port,
@@ -184,6 +463,20 @@ class _MCPPDFConnector(BaseMCPConnector):
         )
         self.pdf = pdf
         self.allowed_root = allowed_root
+        self.auth_token = auth_token
+        self.rate_limit_per_minute = (
+            60 if rate_limit_per_minute is None else rate_limit_per_minute
+        )
+        self.public_host = host
+        self.public_port = port
+        self._auth_proxy: Optional[_AuthReverseProxy] = None
+        if allow_remote:
+            # DAB stays on loopback; only the authenticated proxy is public.
+            self._dab_host = "127.0.0.1"
+            self._dab_port = _find_free_port()
+        else:
+            self._dab_host = host
+            self._dab_port = port
 
     def get_mcp_tools(self) -> dict[str, Any]:
         from pystreampdf._mcp_tools import PyStreamPDFMCPTools
@@ -192,3 +485,37 @@ class _MCPPDFConnector(BaseMCPConnector):
     def get_tool_handlers(self) -> Any:
         from pystreampdf._mcp_tools import PyStreamPDFMCPHandler
         return PyStreamPDFMCPHandler(self.pdf, allowed_root=self.allowed_root)
+
+    def _generate_dab_config(self, tools: dict[str, Any]) -> dict:
+        config = super()._generate_dab_config(tools)
+        if self.allow_remote:
+            config["runtime"]["host"] = self._dab_host
+            config["runtime"]["port"] = self._dab_port
+        return config
+
+    def start_mcp_connector(self) -> str:
+        url = super().start_mcp_connector()
+        if not self.allow_remote:
+            return url
+
+        proxy = _AuthReverseProxy(
+            auth_token=self.auth_token,
+            upstream_host=self._dab_host,
+            upstream_port=self._dab_port,
+            listen_host=self.public_host,
+            listen_port=self.public_port,
+            rate_limit_per_minute=self.rate_limit_per_minute,
+        )
+        try:
+            proxy.start()
+        except Exception:
+            super().stop_mcp_connector()
+            raise
+        self._auth_proxy = proxy
+        return proxy.url
+
+    def stop_mcp_connector(self):
+        if self._auth_proxy is not None:
+            self._auth_proxy.stop()
+            self._auth_proxy = None
+        super().stop_mcp_connector()

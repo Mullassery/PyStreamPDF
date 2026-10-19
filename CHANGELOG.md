@@ -8,6 +8,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- Closed the unauthenticated remote MCP gap (C1). `allow_remote=True` now
+  requires a non-empty `auth_token`. DAB continues to bind only to
+  `127.0.0.1`; a small stdlib reverse proxy (`http.server`) binds the
+  requested public host/port, requires `Authorization: Bearer <token>`
+  using `secrets.compare_digest`, and applies a per-IP token bucket
+  (`rate_limit_per_minute`, default 60) before forwarding to DAB. Loopback
+  mode is unchanged (no token, no proxy). Covered by
+  `tests/test_mcp_auth.py` with a fake upstream for 401/200/429; TLS or a
+  hardened reverse proxy is still recommended for untrusted networks.
+- The proxy is an application-level boundary only: traffic remains
+  plaintext HTTP and the token is not a substitute for TLS. This is
+  documented in `SECURITY.md` and `README.md` rather than implying the
+  connector is safe to expose directly.
+
+### Added
+
+- Closed the missing scanned/complex-table fixture gap (C2).
+  `tests/test_scanned_and_span_fixtures.py` generates a real two-column
+  reportlab page, rasterizes it with PyMuPDF at ~150 dpi into a text-free
+  scanned PDF, and verifies extraction detects an image-only scanned page.
+  A real OCR assertion uses the existing `OcrPipeline` and skips when
+  Tesseract is unavailable (no mocked/fabricated OCR text). A reportlab
+  `Table` with spanning header/summary cells verifies merged-cell text
+  survives extraction. Full suite: 580 passed / 6 skipped (optional
+  dependencies such as Tesseract are skipped when absent).
+
 ### Fixed
 
 - The MCP connector now uses StatGuardian's canonical

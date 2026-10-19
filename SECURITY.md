@@ -39,10 +39,18 @@ not aspirational security posture.
 - **MCP/DAB connector** (`python/pystreampdf/_mcp_connector.py`): binds to
   `127.0.0.1` by default with no cross-origin access and read-only tool
   behavior. Exposing it beyond localhost requires an explicit
-  `allow_remote=True` opt-in. **The connector has no authentication of its
-  own** — if you opt into `allow_remote=True`, you are responsible for
-  putting authentication/network controls in front of it; nothing in this
-  package provides that.
+  `allow_remote=True` opt-in **and a non-empty `auth_token`**. In remote
+  mode DAB still binds only to `127.0.0.1`; a small stdlib reverse proxy
+  binds the requested public `host`/`port`, requires
+  `Authorization: Bearer <auth_token>` (constant-time comparison via
+  `secrets.compare_digest`), and applies a per-IP token bucket
+  (`rate_limit_per_minute`, default 60). Covered by
+  `tests/test_mcp_auth.py` against a fake upstream (401/200/429).
+  **This application-level token check is not a substitute for TLS or a
+  hardened reverse proxy.** Traffic is plaintext HTTP unless you terminate
+  TLS in front of it; for exposure to untrusted networks, put a real
+  reverse proxy (with TLS, request-size limits, and logging) in front of the
+  connector. Loopback-only mode is unchanged and does not require a token.
 - **Untrusted PDF input**: this library parses arbitrary PDF files via
   PDFium (a large, C++, memory-unsafe parser embedded via FFI). PDFium has
   had real historical CVEs. This project does not sandbox PDF parsing

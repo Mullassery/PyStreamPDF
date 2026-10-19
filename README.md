@@ -56,9 +56,12 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 - **Prebuilt wheels are macOS arm64 only.** A source distribution ships as of 2.3.0, so
   other platforms build from source, but that still requires a local Rust toolchain and a
   discoverable `libpdfium` (see `scripts/download_pdfium.sh`).
-- **No realistic OCR/layout test fixtures yet.** The OCR and table-validation code is real
-  and unit-tested, but tests use synthetic images and mocks — no true multi-column layout
-  or realistic scanned-document fixtures.
+- **OCR/layout fixtures are generated at test time, not checked in.** `tests/` now
+  renders a real two-column PDF, rasterizes it with PyMuPDF at ~150 dpi, and embeds the
+  image as a text-free scanned PDF (`tests/test_scanned_and_span_fixtures.py`). The OCR
+  assertion runs against real Tesseract output and skips when Tesseract is unavailable;
+  it is not mocked. A reportlab table-with-spans fixture covers merged-cell text
+  extraction. This is fixture coverage, not an OCR quality benchmark.
 - **Cross-project integration is limited but real.** The MCP connector imports the
   canonical `BaseMCPConnector` from `statguardian._mcp_connector` when StatGuardian is
   installed (with a local fallback for older installs), verified by
@@ -67,14 +70,19 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 - **The Rust-backed `pystreampdf.open()` / `load_index()` silently becomes `None`** if the
   compiled `_core` extension is unavailable (e.g. a from-source install without
   `maturin develop`), falling back to the pure-Python path rather than erroring.
-- **The MCP connector has no authentication of its own.** It binds to `127.0.0.1` with
-  read-only permissions by default; exposing it further requires `allow_remote=True`.
+- **Remote MCP exposure is bearer-token protected, not TLS-protected.** The connector
+  binds to `127.0.0.1` with read-only permissions by default. `allow_remote=True`
+  requires a non-empty `auth_token`; DAB stays on loopback and a stdlib reverse proxy
+  enforces `Authorization: Bearer <token>` plus a per-IP rate limit before forwarding.
+  Traffic is plaintext HTTP, so a TLS-terminating reverse proxy is still required for
+  untrusted networks (see `SECURITY.md`).
 
 ## Project status
 
-**Beta.** Current version **2.3.0** (`Development Status :: 4 - Beta`). The last
-confirmed-green CI run reported `pytest` — 557 passed / 2 skipped and `cargo test` — 23
-passed / 0 failed across Python 3.10/3.11/3.12. See
+**Beta.** Current version **2.3.0** (`Development Status :: 4 - Beta`). The full
+`pytest tests/` suite on this change passes locally — 580 passed / 6 skipped
+(optional-dependency skips), and the last confirmed-green CI run reported `cargo test` —
+23 passed / 0 failed across Python 3.10/3.11/3.12. See
 [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md) for what is real vs. partial.
 
 ## Installation

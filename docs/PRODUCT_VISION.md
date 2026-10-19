@@ -63,10 +63,11 @@ CI from infra bugs).
   PyPI. A source distribution ships as of 2.3.0, so other platforms build
   from source, but that still needs a local Rust toolchain and a
   discoverable `libpdfium`.
-- **No realistic OCR/layout test fixtures yet.** The OCR and
-  table-validation code is real and unit-tested, but `tests/` only
-  contains synthetic single-glyph images and mocks — no true multi-column
-  layout or realistic scanned-document fixtures.
+- **OCR/layout fixtures are now real but generated at test time.** `tests/`
+  renders a two-column PDF, rasterizes it with PyMuPDF at ~150 dpi into a
+  text-free scanned PDF, and exercises real Tesseract OCR when available
+  (skipped otherwise). A reportlab table-with-spans fixture covers merged
+  cells. These are regression fixtures, not an OCR quality benchmark.
 - **Cross-project integration is limited but real.** The MCP connector
   imports the canonical `BaseMCPConnector` from
   `statguardian._mcp_connector` when StatGuardian is installed, with a
@@ -81,9 +82,9 @@ CI from infra bugs).
 1. Build Linux (manylinux) and, ideally, Windows wheels in CI so
    `pip install pystreampdf` doesn't require a local Rust toolchain +
    PDFium outside macOS arm64.
-2. Add real multi-column-layout and scanned-document test fixtures for the
-   existing OCR/validation code, replacing the current synthetic
-   single-glyph mocks.
+2. Expand real multi-column-layout and scanned-document fixtures beyond the
+   generated two-column sample (varied fonts, noise, rotations) so the
+   existing OCR/validation code has broader regression coverage.
 3. Exercise the rewired MCP handlers (`39f7c8c`) with integration-style
    tests that go through the MCP/DAB connector path, not just direct
    function calls.
