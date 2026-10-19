@@ -42,6 +42,7 @@ TOKENIZER_MODE = (
 # unavailable. Kept as a module constant so callers that need the *ratio*
 # itself (rather than a count) still have a single source of truth.
 HEURISTIC_CHARS_PER_TOKEN = 4.0
+_APPROX_WARNED = False
 
 
 def is_exact() -> bool:
@@ -72,4 +73,11 @@ def count_tokens(text: Optional[str]) -> int:
             # "token count looks wrong" report this masks.
             logger.debug("tiktoken encode() failed, falling back to heuristic: %s", e)
 
+    global _APPROX_WARNED
+    if not _APPROX_WARNED:
+        logger.warning(
+            "tiktoken is not installed; token counts use the len/4 heuristic. "
+            "Install `pystreampdf[tiktoken]` for exact counts (see is_exact())."
+        )
+        _APPROX_WARNED = True
     return max(1, int(len(text) / HEURISTIC_CHARS_PER_TOKEN))
