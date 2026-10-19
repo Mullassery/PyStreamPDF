@@ -1,6 +1,9 @@
 """MCP 2.0 Tools for PyStreamPDF - PDF Document Processing"""
 
+from __future__ import annotations
+
 import re
+from pathlib import Path
 from typing import Any
 
 
@@ -202,19 +205,31 @@ class PyStreamPDFMCPHandler:
     `{"status": "not_implemented", ...}` rather than a fabricated result.
     """
 
-    def __init__(self, pdf: Any = None):
+    def __init__(self, pdf: Any = None, allowed_root: str | Path | None = None):
         # `pdf` (an already-opened document) is accepted for API
         # compatibility with callers that have one, but every method takes
         # its own `pdf_path` and opens it fresh -- an MCP tool call is
         # inherently per-path, and a single handler instance may be asked
         # to process different files across calls.
         self.pdf = pdf
+        self.allowed_root = Path(allowed_root).resolve() if allowed_root is not None else None
 
-    @staticmethod
-    def _open(pdf_path: str):
+    def _check_path(self, pdf_path: str) -> Path:
+        """Resolve ``pdf_path`` and enforce the optional ``allowed_root`` sandbox."""
+        resolved = Path(pdf_path).resolve()
+        if self.allowed_root is not None:
+            try:
+                resolved.relative_to(self.allowed_root)
+            except ValueError:
+                raise ValueError(
+                    f"pdf_path {pdf_path!r} is outside allowed_root {self.allowed_root}"
+                ) from None
+        return resolved
+
+    def _open(self, pdf_path: str):
         import pystreampdf
 
-        return pystreampdf.open(pdf_path)
+        return pystreampdf.open(str(self._check_path(pdf_path)))
 
     async def extract_text(self, pdf_path: str, pages: str = "all",
                           preserve_layout: bool = False) -> dict[str, Any]:

@@ -128,6 +128,7 @@ class PDFProcessor:
         host: str = "127.0.0.1",
         allow_remote: bool = False,
         cors_origins: Optional[list] = None,
+        allowed_root: Optional[str] = None,
     ) -> str:
         """Start the local MCP/DAB connector.
 
@@ -136,6 +137,11 @@ class PDFProcessor:
         ``cors_origins``) to expose the connector beyond localhost — this
         connector has no authentication of its own, so widening exposure is
         an explicit, deliberate choice for the caller.
+
+        ``allowed_root`` restricts every MCP tool's ``pdf_path`` to that
+        directory (resolved, symlink-aware). Without it, paths are not
+        sandboxed; set it whenever the connector is reachable by anything
+        other than a trusted local caller.
         """
         self.mcp_connector = _MCPPDFConnector(
             pdf=self,
@@ -143,6 +149,7 @@ class PDFProcessor:
             host=host,
             allow_remote=allow_remote,
             cors_origins=cors_origins,
+            allowed_root=allowed_root,
         )
         return self.mcp_connector.start_mcp_connector()
 
@@ -159,6 +166,7 @@ class _MCPPDFConnector(BaseMCPConnector):
         host: str = "127.0.0.1",
         allow_remote: bool = False,
         cors_origins: Optional[list] = None,
+        allowed_root: Optional[str] = None,
     ):
         super().__init__(
             "PyStreamPDF",
@@ -168,6 +176,7 @@ class _MCPPDFConnector(BaseMCPConnector):
             cors_origins=cors_origins,
         )
         self.pdf = pdf
+        self.allowed_root = allowed_root
 
     def get_mcp_tools(self) -> dict[str, Any]:
         from pystreampdf._mcp_tools import PyStreamPDFMCPTools
@@ -175,4 +184,4 @@ class _MCPPDFConnector(BaseMCPConnector):
 
     def get_tool_handlers(self) -> Any:
         from pystreampdf._mcp_tools import PyStreamPDFMCPHandler
-        return PyStreamPDFMCPHandler(self.pdf)
+        return PyStreamPDFMCPHandler(self.pdf, allowed_root=self.allowed_root)
