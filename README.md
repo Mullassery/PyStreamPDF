@@ -85,6 +85,20 @@ pip install "pystreampdf[tiktoken]"
 
 Requires Python 3.9+.
 
+### Optional integrations
+
+Every integration below is optional: the base install and the test suite run
+without it, and the relevant tests skip (or assert the actionable error) rather
+than fail when it is missing.
+
+- **PyMuPDF** (`pip install pymupdf`) — rasterizes scanned pages for the OCR
+  pipeline (`pystreampdf.ocr.pipeline`). Without it, scanned-page OCR raises a
+  clear `ImportError` with the install hint.
+- **tiktoken** (`pip install "pystreampdf[tiktoken]"`) — real BPE
+  (`cl100k_base`) token counts; falls back to the `len(text) / 4` heuristic.
+- **pytest-asyncio** — a dev/test extra only (`pip install "pystreampdf[dev]"`),
+  required to run the `tests/test_mcp_tools.py` async tests.
+
 ### Optional high-fidelity extraction (Docling)
 
 The native Rust/PDFium path is the default. For complex layouts, tables or
