@@ -86,6 +86,22 @@ except ImportError:
     TesseractProvider = None
     PaddleProvider = None
 
+# Docling backend (optional, MIT)
+try:
+    from .docling_backend import (
+        DoclingBackend,
+        DoclingExtraction,
+        DoclingUnavailable,
+        document_to_chunks,
+        extract_with_docling,
+    )
+except ImportError:  # pragma: no cover
+    DoclingBackend = None
+    DoclingExtraction = None
+    DoclingUnavailable = None
+    document_to_chunks = None
+    extract_with_docling = None
+
 # Validation module (optional)
 try:
     from .validation import (
@@ -189,6 +205,8 @@ __all__ = [
     *((["ExtractedTable", "ExcelExporter", "PDFToExcelPipeline"]) if ExtractedTable is not None else []),
     # OCR (optional)
     *((["OcrManager", "OcrProvider", "OcrResult", "OcrPipeline", "ProcessedPage", "TextRegion", "OcrCapabilities", "TesseractProvider", "PaddleProvider"]) if OcrManager is not None else []),
+    # Docling backend (optional)
+    *((["DoclingBackend", "DoclingExtraction", "DoclingUnavailable", "document_to_chunks", "extract_with_docling"]) if DoclingBackend is not None else []),
     # Validation (optional)
     *((["TextValidator", "TableValidator", "LayoutValidator", "ConfidenceScorer", "ValidationIssue", "ValidationResult", "TableValidationResult", "OcrTable", "PageConfidenceScore", "Recommendation"]) if TextValidator is not None else []),
     # Intelligence (optional)

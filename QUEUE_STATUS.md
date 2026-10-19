@@ -3,7 +3,7 @@
 This file records what was shipped, what is blocked/failed, and what is rejected for this repository. It complements `AUDIT_FINDINGS.md`.
 
 ## Shipped
-- No code changes; audit/bundle docs added.
+- Optional Docling layout/table/OCR backend (`pystreampdf[docling]`), mapping to native `ContentChunk`s.
 
 ## Blocked / failed
 - Linux/Windows wheels, Docling/PyMuPDF benchmark, realistic OCR fixtures.

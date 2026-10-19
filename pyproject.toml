@@ -31,6 +31,7 @@ dependencies = ["rich>=13.0", "pyyaml>=6.0"]
 # Real BPE tokenization for accurate token-count estimates. Falls back to the
 # len(text)/4 heuristic (clearly labeled as approximate) when not installed.
 tiktoken = ["tiktoken>=0.5"]
+docling = ["docling>=2.0"]
 dev = [
     "maturin>=1.0,<2.0",
     "pytest>=7.0",

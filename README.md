@@ -85,6 +85,28 @@ pip install "pystreampdf[tiktoken]"
 
 Requires Python 3.9+.
 
+### Optional high-fidelity extraction (Docling)
+
+The native Rust/PDFium path is the default. For complex layouts, tables or
+scanned pages, install the MIT-licensed [Docling](https://github.com/docling-project/docling)
+backend and use it as an extraction source while keeping PyStreamPDF's chunk
+and budget types:
+
+```bash
+pip install "pystreampdf[docling]"
+```
+
+```python
+from pystreampdf import extract_with_docling
+
+result = extract_with_docling("report.pdf", target_tokens=500)
+for chunk in result.chunks:
+    print(chunk.chunk_type, chunk.page_start, chunk.estimated_tokens)
+```
+
+Docling downloads its own layout/OCR models on first use. It is optional and
+is **not** part of the base install.
+
 ## Quick start
 
 ```python
