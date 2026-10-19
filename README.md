@@ -159,6 +159,16 @@ Run the tests with:
 make test          # cargo test && pytest tests/
 ```
 
+## Known issues and deferred work
+
+**Blocked / failed:**
+- Linux/Windows wheels, Docling/PyMuPDF benchmark, realistic OCR fixtures.
+
+**Rejected / deferred:**
+- A full PDF RAG platform; Docling owns layout understanding.
+
+Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+
 ## Queue status
 
 Shipped, blocked/failed, and rejected work for this repository is documented in
