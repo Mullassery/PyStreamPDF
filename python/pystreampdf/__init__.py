@@ -5,7 +5,7 @@ Actual token savings depend on your documents — see the README's "Token
 Savings" section rather than relying on a fixed multiplier here.
 """
 
-__version__ = "2.4.1"  # Real MCP tool implementations (extract/OCR/validate/etc.), previously all hardcoded fixture data
+__version__ = "2.4.2"  # Real MCP tool implementations (extract/OCR/validate/etc.), previously all hardcoded fixture data
 
 # Optional: Rust core bindings (requires maturin build). If the extension is
 # missing, the Python package still imports, but the Rust-backed API must fail

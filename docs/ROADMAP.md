@@ -1,6 +1,6 @@
 # PyStreamPDF: Roadmap
 
-**Version:** 2.4.0 (current, per `Cargo.toml` / `python/pystreampdf/__init__.py`)
+**Version:** 2.4.2 (current, per `Cargo.toml` / `python/pystreampdf/__init__.py`)
 **Last updated:** 2026-09-06
 
 ## Honest status (read this first)

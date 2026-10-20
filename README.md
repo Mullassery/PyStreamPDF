@@ -89,7 +89,7 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 
 ## Project status
 
-**Beta.** Current version **2.4.0** (`Development Status :: 4 - Beta`). The full
+**Beta.** Current version **2.4.2** (`Development Status :: 4 - Beta`). The full
 `pytest tests/` suite on this change passes locally — 600 passed / 4 skipped
 (optional-dependency skips), and the last confirmed-green CI run reported `cargo test` —
 23 passed / 0 failed across Python 3.10/3.11/3.12. See
