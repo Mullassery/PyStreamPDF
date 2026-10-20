@@ -53,7 +53,7 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 - **No committed token-savings benchmark.** Earlier "70% reduction" / "10-50x" claims
   were never backed by a checked-in benchmark and have been retracted. Actual savings
   depend on your documents and how narrowly you scope queries.
-- **Prebuilt wheels are macOS arm64 only.** A source distribution ships as of 2.3.0, so
+- **Prebuilt wheels are macOS arm64 only.** A source distribution has shipped since 2.3.0, so
   other platforms build from source, but that still requires a local Rust toolchain and a
   discoverable `libpdfium` (see `scripts/download_pdfium.sh`).
 - **OCR/layout fixtures are generated at test time, not checked in.** `tests/` now
@@ -89,7 +89,7 @@ token-budget-aware chunks so you can send only the relevant parts. It ships as
 
 ## Project status
 
-**Beta.** Current version **2.3.0** (`Development Status :: 4 - Beta`). The full
+**Beta.** Current version **2.4.0** (`Development Status :: 4 - Beta`). The full
 `pytest tests/` suite on this change passes locally — 600 passed / 4 skipped
 (optional-dependency skips), and the last confirmed-green CI run reported `cargo test` —
 23 passed / 0 failed across Python 3.10/3.11/3.12. See

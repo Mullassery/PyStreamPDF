@@ -18,7 +18,7 @@ history of retracted claims (a `Document`/`.extract_relevant()` API that
 never existed, unmeasured "70%/10-50x" token-savings numbers, weeks of red
 CI from infra bugs).
 
-## What's real and working today (v2.3.0)
+## What's real and working today (v2.4.0)
 
 - **Token budget system** — `python/pystreampdf/token_budget.py`
   (`TokenBudgetConfig`, `BudgetRule`): keyword/field-based multiplier rules
