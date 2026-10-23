@@ -176,6 +176,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.4.3] - 2026-10-23
+
+### Added
+- Added the Excel export extra and fixed the MCP connector import.
+
 ## [2.3.2] - 2026-10-18
 
 ### Security
