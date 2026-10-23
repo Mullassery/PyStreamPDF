@@ -401,7 +401,7 @@ class _AuthReverseProxy:
 
 
 try:
-    from statguardian._mcp_connector import BaseMCPConnector
+    from statguardian import BaseMCPConnector
 except ImportError:
 
     class BaseMCPConnector(ABC):

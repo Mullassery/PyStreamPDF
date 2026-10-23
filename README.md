@@ -102,6 +102,9 @@ pip install pystreampdf
 
 # With exact token counting (tiktoken)
 pip install "pystreampdf[tiktoken]"
+
+# With PDF table -> .xlsx export (PyStreamXL)
+pip install "pystreampdf[excel]"
 ```
 
 Requires Python 3.9+.
@@ -117,6 +120,8 @@ than fail when it is missing.
   clear `ImportError` with the install hint.
 - **tiktoken** (`pip install "pystreampdf[tiktoken]"`) — real BPE
   (`cl100k_base`) token counts; falls back to the `len(text) / 4` heuristic.
+- **PyStreamXL** (`pip install "pystreampdf[excel]"`) — writes extracted tables
+  to `.xlsx`. Without it, Excel export raises an `ImportError` naming the extra.
 - **pytest-asyncio** — a dev/test extra only (`pip install "pystreampdf[dev]"`),
   required to run the `tests/test_mcp_tools.py` async tests.
 - **Tesseract + pytesseract + Pillow** — real OCR for scanned PDFs
