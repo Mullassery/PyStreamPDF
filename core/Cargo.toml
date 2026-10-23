@@ -12,7 +12,7 @@ categories.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
-pdfium-render = { version = "0.8", features = ["sync"] }
+pdfium-render = { version = "0.9", features = ["sync"] }
 rusqlite = { version = "0.31", features = ["chrono", "bundled"] }
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
