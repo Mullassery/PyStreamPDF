@@ -235,7 +235,7 @@ make test          # cargo test && pytest tests/
 - Persisting/sharing rate-limit buckets across restarts or workers (the proxy keeps
   them in memory by design; use an external limiter for multi-process deployments).
 
-Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+Full shipped/blocked/rejected detail: [`docs/internal/QUEUE_STATUS.md`](docs/internal/QUEUE_STATUS.md).
 
 ## Contributing
 
