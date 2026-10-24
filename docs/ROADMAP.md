@@ -58,10 +58,11 @@ realistically next.
 
 ## What's partial, scaffolding, or unverified
 
-- **No committed token-savings benchmark.** Earlier README/docstring
-  claims of "70% reduction" or "10-50x" savings were never backed by a
-  checked-in benchmark and have been retracted in README.md. Actual
-  savings depend on the caller's documents and query scoping.
+- **Token-savings benchmark now committed (2026-10-25).**
+  `benchmarks/token_savings.py` measures the real `SemanticChunker` +
+  `TokenBudgetConfig` on a generated document (latency/throughput and
+  budgeted query-vs-whole-document reduction). Do not treat its synthetic
+  number as universal; run it on your own documents.
 - **Narrow wheel coverage.** Only a macOS arm64 wheel is published to
   PyPI. A source distribution ships as of 2.3.0, so other platforms build
   from source, but that still needs a local Rust toolchain and a
@@ -94,11 +95,11 @@ realistically next.
    `_mcp_tools.py` calls real extraction/OCR/validation code, add
    integration-style tests that invoke it through the MCP/DAB connector
    path, not just direct function calls.
-4. **If/when a token-savings number is worth publishing, measure it and
-   check the benchmark script into the repo** rather than restating a
-   percentage in prose. Until then, point users at
-   `examples/token_budget_and_cache_example.py` to measure their own
-   case.
+4. ~~If/when a token-savings number is worth publishing, measure it and
+   check the benchmark script into the repo.~~ Done 2026-10-25
+   (`benchmarks/token_savings.py`); still point users at their own
+   documents/`examples/token_budget_and_cache_example.py` for real
+   workloads.
 
 No committed dates: this project's actual recent pace (`git log`) has
 been fixing previously-fabricated claims, security stubs, and CI
@@ -113,9 +114,8 @@ so this roadmap intentionally doesn't restate one.
 - [x] Malformed/truncated-file coverage (`tests/test_security.py`)
 - [x] Real multi-column layout and scanned-PDF fixtures (generated at test
       time; OCR assertions skip when Tesseract is unavailable)
-- [ ] Integration tests for the MCP/DAB connector path specifically
-- [ ] Any committed performance benchmark (latency, throughput, or token
-      savings) — none exist in this repo today
+- [x] Integration tests for the MCP/DAB connector path specifically (`tests/test_mcp_dab_connector.py` uses a fake `dab` executable to exercise the real subprocess/config path)
+- [x] Committed performance benchmark (`benchmarks/token_savings.py`: chunking latency/throughput + budgeted token reduction; ~93.9% on the synthetic reference document)
 
 ## Technical Debt (verified 2026-09-20, file:line specific)
 
