@@ -56,6 +56,8 @@ starts, and record the decision in the PR or changelog.
 
 ## OSS gap analysis — 2026-10-24
 
+**What matters most here:** install coverage and layout/OCR fidelity. macOS-arm64-only blocks CI/Docker, and PDFium heuristics trail Docling/Marker on multi-column, merged-cell, and scanned pages; ship wheels first, then integrate OCR/layout.
+
 Scope: Compared PyStreamPDF's PDF parsing, layout/OCR, chunking, and caching against four maintained document-extraction projects, weighting what a RAG pipeline author would actually install and measure.
 
 ### Comparable OSS projects
