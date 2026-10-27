@@ -301,7 +301,7 @@ pip install pystreampdf
 uv add pystreampdf
 
 # Or from source
-git clone https://github.com/Mullassery/PyStreamPDF.git
+git clone ../PyStreamPDF
 cd PyStreamPDF
 pip install -e .
 ```
@@ -310,7 +310,7 @@ pip install -e .
 
 ## Support & Contributing
 
-- **Issues**: https://github.com/Mullassery/PyStreamPDF/issues
+- **Issues**: ../PyStreamPDF/issues
 - **Contributing**: See CONTRIBUTING.md
 - **License**: MIT
 

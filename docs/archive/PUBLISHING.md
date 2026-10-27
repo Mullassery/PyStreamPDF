@@ -122,7 +122,7 @@ pip install PyStreamPDF==1.5.0
 
 ### GitHub
 
-https://github.com/Mullassery/StreamPDF
+../StreamPDF
 
 ### License
 
@@ -135,7 +135,7 @@ EOF
 
 ### Manual Release (via GitHub Web UI)
 
-1. Go to: https://github.com/Mullassery/StreamPDF/releases/new
+1. Go to: ../StreamPDF/releases/new
 2. Tag: `v1.5.0`
 3. Title: "StreamPDF v1.5.0: Enterprise Features"
 4. Description: See above
@@ -258,4 +258,4 @@ After v1.5.0 is released:
 
 ---
 
-For questions or issues, see: https://github.com/Mullassery/StreamPDF/issues
+For questions or issues, see: ../StreamPDF/issues

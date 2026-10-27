@@ -48,7 +48,7 @@
 
 **Deployment**: ✅ LIVE on PyPI
 - Install: `pip install pyreverseetl==1.5.0`
-- Repository: https://github.com/Mullassery/PyReverseETL
+- Repository: ../PyReverseETL
 - Package: https://pypi.org/project/PyReverseETL/1.5.0/
 
 ---
