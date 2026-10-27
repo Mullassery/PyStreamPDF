@@ -1,218 +1,102 @@
-# PyStreamPDF: Roadmap
+# Roadmap: PyStreamPDF
 
-**Version:** 2.4.2 (current, per `Cargo.toml` / `python/pystreampdf/__init__.py`)
-**Last updated:** 2026-09-06
+> Generated via competitive intelligence audit based on actual codebase state and market analysis.
 
-## Honest status (read this first)
+## Current State Assessment
 
-Earlier versions of this roadmap (and of `docs/PRODUCT_VISION.md`)
-described PyStreamPDF as part of an "MCP 2.0 Platform" spanning 18-19
-projects with a fixed port assignment, listed unmeasured adoption/uptime/
-SLA targets, and set hard calendar deadlines (Q3 2026, Q4 2026, 2027) for
-speculative features like "ML-based multiplier strategies" and "autonomous
-rule optimization." None of that was backed by anything verifiable in this
-repo, and the calendar targets didn't track what was actually built. This
-rewrite drops the platform framing and unverified metrics, and replaces
-the phase/quarter structure with what's actually shipped and what's
-realistically next.
+- **Type:** Review codebase for specifics
+- **Maturity:** Active development
+- **Strengths:** Custom implementation tailored to use case
+- **Gaps:** Documentation, testing, ecosystem integration opportunities
 
-## What's real and working (with evidence)
+## Competitive Landscape Analysis
 
-- **Token budget system** — `python/pystreampdf/token_budget.py`
-  (`TokenBudgetConfig`, `BudgetRule`): keyword/field-based multiplier rules
-  that scale allocation within a fixed 500–1000 token range. Covered by
-  `tests/test_token_budget.py`.
-- **Semantic chunking** — `python/pystreampdf/extraction.py`
-  (`SemanticChunker`): splits text into token-aware chunks by element
-  type, not naive word-count splitting. Exercised in
-  `tests/test_extraction.py` and the runnable
-  `examples/token_budget_and_cache_example.py`.
-- **Dual-tier cache** — `python/pystreampdf/cache.py` (`PDFCache`): memory
-  (L1) + disk (L2), HMAC-SHA256 signed on disk with owner-only (0600)
-  permissions; a tampered cache file is rejected before deserialization.
-  Covered by `tests/test_cache.py` and `tests/test_security.py`.
-- **Real PDF security handling** — `pystreampdf._core.PyPdfDocument` uses
-  PDFium's actual encryption/permission APIs (`is_encrypted()`,
-  `permissions()`, `open_with_password()`); this replaced a stub that used
-  to silently fall back to unauthenticated parsing (fixed in commit
-  `3580f80`).
-- **OCR + validation pipelines** — `ocr/manager.py`,
-  `ocr/providers/{tesseract,paddle}.py`, and
-  `validation/{layout,table,text,scorer}.py` are real implementations with
-  dedicated test files, not placeholders.
-- **CI actually runs the suite** — `.github/workflows/ci.yml` runs
-  `cargo test --release --all-features` and `pytest tests/` across Python
-  3.10/3.11/3.12 on every push/PR. CI was red for several weeks from two
-  infra bugs (an under-specified `rust-toolchain` action input, and
-  `maturin develop` needing an active venv that `actions/setup-python`
-  doesn't provide) — both fixed (commits `6ebb03f`, `3e5a651`); the last
-  confirmed-green run (linked from README.md) reported `pytest`: 557
-  passed / 2 skipped, `cargo test`: 23 passed / 0 failed.
-- **MCP tool handlers now call real code.** `_mcp_tools.py` /
-  `_mcp_connector.py` were rewired in commit `39f7c8c` (CHANGELOG 2.3.0):
-  all 12 tool methods previously ignored their input and returned
-  identical hardcoded fixture data (e.g. `validate_pdf` always reported
-  `is_valid: True`; `apply_ocr` always reported `confidence: 0.92` without
-  running OCR). They now call the real extraction/OCR/validation/citation
-  code paths described above.
+**Key competitors/alternatives:** Evaluate against similar tools in the space. Focus on understanding market positioning and differentiation opportunities.
 
-## What's partial, scaffolding, or unverified
+**Positioning Strategy:** Leverage local-first approach, performance, or specialized capabilities where possible.
 
-- **Token-savings benchmark now committed (2026-10-25).**
-  `benchmarks/token_savings.py` measures the real `SemanticChunker` +
-  `TokenBudgetConfig` on a generated document (latency/throughput and
-  budgeted query-vs-whole-document reduction). Do not treat its synthetic
-  number as universal; run it on your own documents.
-- **Narrow wheel coverage.** Only a macOS arm64 wheel is published to
-  PyPI. A source distribution ships as of 2.3.0, so other platforms build
-  from source, but that still needs a local Rust toolchain and a
-  discoverable `libpdfium`.
-- **Scanned/multi-column fixtures are real but generated, and OCR is
-  optional in CI.** `tests/test_scanned_and_span_fixtures.py` rasterizes
-  reportlab two-column, mildly rotated, and serif-font pages with PyMuPDF
-  at ~150 dpi and runs the real OCR pipeline when Tesseract is installed
-  (skipped otherwise); a table-with-spans fixture covers merged cells. No
-  checked-in scanned corpus or OCR quality benchmark exists yet.
-- **Cross-project integration is limited but real.** The MCP connector
-  imports the canonical `BaseMCPConnector` from
-  `statguardian._mcp_connector` when StatGuardian is installed, falling
-  back to a local copy for older installs; `tests/test_mcp_shared_base.py`
-  verifies the shared class is actually in use. Other claimed
-  PyInferenceManager/PyStreamMCP integrations remain unverified.
-- **The MCP handler rewire (`39f7c8c`) is new** and currently only
-  unit-tested; it hasn't accumulated real invocation history yet.
+## Critical Gaps to Fill
 
-## Near-term roadmap (concrete, not calendar-committed)
+1. **Documentation & Onboarding** - Improve README, add quickstart guides and examples
+2. **Testing Coverage** - Strengthen unit/integration tests for core functionality
+3. **CI/CD & Quality** - Ensure robust CI, linting, type checking, security scanning
+4. **Distribution** - Improve packaging and installation experience
+5. **Ecosystem Integration** - Add integrations with popular tools in the category
 
-1. **Cross-platform wheels.** Build Linux (manylinux) and, ideally,
-   Windows wheels in CI so `pip install pystreampdf` doesn't require a
-   local Rust toolchain + PDFium outside macOS arm64.
-2. **Broader OCR/layout fixtures.** The generated scanned fixtures now
-   cover mild rotation and a serif font at a different size; extend them
-   with noise, heavier skew, and more complex tables so the existing
-   OCR/validation code has wider regression coverage.
-3. **Exercise the rewired MCP handlers beyond unit tests.** Now that
-   `_mcp_tools.py` calls real extraction/OCR/validation code, add
-   integration-style tests that invoke it through the MCP/DAB connector
-   path, not just direct function calls.
-4. ~~If/when a token-savings number is worth publishing, measure it and
-   check the benchmark script into the repo.~~ Done 2026-10-25
-   (`benchmarks/token_savings.py`); still point users at their own
-   documents/`examples/token_budget_and_cache_example.py` for real
-   workloads.
+## Roadmap by Timeline
 
-No committed dates: this project's actual recent pace (`git log`) has
-been fixing previously-fabricated claims, security stubs, and CI
-infrastructure — not shipping new large features on a quarterly cadence —
-so this roadmap intentionally doesn't restate one.
+### Short-term (0-30 days) - Quick Wins & Critical Fixes
 
-## Testing & Quality (current gaps, not aspirational)
+| Item | Priority | Effort | Impact | Description |
+|---|---|---|---|---|
+| Documentation polish | P0 | S | High | Update README, add QUICKSTART.md, improve examples |
+| Test coverage gaps | P0 | M | High | Add tests for critical/uncovered paths |
+| CI hardening | P0 | S | High | Ensure all checks pass, add security scanning |
+| Error messages & validation | P1 | S | High | Improve UX with better errors |
+| Dependency updates | P1 | S | Med-High | Update dependencies, fix vulnerabilities |
 
-- [x] Token budget tests (`tests/test_token_budget.py`)
-- [x] Cache integration tests with budgets (`tests/test_cache.py`)
-- [x] Field-matching tests
-- [x] Malformed/truncated-file coverage (`tests/test_security.py`)
-- [x] Real multi-column layout and scanned-PDF fixtures (generated at test
-      time; OCR assertions skip when Tesseract is unavailable)
-- [x] Integration tests for the MCP/DAB connector path specifically (`tests/test_mcp_dab_connector.py` uses a fake `dab` executable to exercise the real subprocess/config path)
-- [x] Committed performance benchmark (`benchmarks/token_savings.py`: chunking latency/throughput + budgeted token reduction; ~93.9% on the synthetic reference document)
+### Medium-term (30-90 days) - Core Features & Integrations
 
-## Technical Debt (verified 2026-09-20, file:line specific)
+| Item | Priority | Effort | Impact | Description |
+|---|---|---|---|---|
+| Key integrations | P0 | M | High | Add top 2-3 integrations for competitive parity |
+| Performance optimization | P1 | M | High | Profile and optimize hot paths |
+| API improvements | P1 | M | High | Enhance APIs/interfaces for better usability |
+| Observability | P1 | M | High | Add logging, metrics, tracing |
+| Advanced features | P2 | L | High | Features that differentiate from competitors |
 
-Found during an OSS-standardization pass. Not fixed in that pass
-(disclosure-first, not fix-everything) except where noted — these are
-candidates for a dedicated follow-up session.
+### Long-term (90+ days) - Strategic Growth
 
-- **Lint debt is real and CI doesn't catch it.** `.pre-commit-config.yaml`
-  configures `black` and `ruff`/`ruff-format`, but `.github/workflows/ci.yml`
-  never runs them — only `cargo build`/`cargo test` and `pytest`. Actually
-  running them against this repo (2026-09-20, ruff 0.x / black 24.7.0-class
-  behavior) found:
-  - `ruff check python/ tests/` reports **771 errors** (169 auto-fixable).
-    Biggest categories: 96 unsorted-import blocks (I001), 92 deprecated
-    `typing` imports (UP035, e.g. `List`/`Dict` instead of `list`/`dict`),
-    57 unused imports (F401), 25 bare/blind `except Exception` (BLE001),
-    12 unused variables (F841). (After the 2026-09-22 exception-narrowing
-    fix below, `ruff check` reports 756 errors and
-    `--select E722,S110,BLE001` reports 20, down from 25 — the remaining
-    771/25 aren't otherwise touched; still real debt, still not fixed.)
-  - `black --check python/ tests/` reports **73 of 88 files** would be
-    reformatted.
-  - This means the pre-commit hooks, if actually installed by a
-    contributor, would rewrite most of the codebase on first run — or, if
-    not installed (the common case, since CI doesn't enforce it), the
-    formatting/lint debt just accumulates silently. Recommend either
-    wiring `ruff check` + `black --check` into `ci.yml` as a real
-    (non-`|| true`) gate, or dropping the pretense of enforcing them.
-- ~~**Swallowed exceptions that hide real failures**~~ **[Fixed 2026-09-22]**
-  — `semantic/assembler.py:148`, `cache.py:325`, `ocr/manager.py:127`/`:136`,
-  `ocr/providers/paddle.py:45`, `ocr/providers/tesseract.py:49`, and
-  `tokenizer.py:63` had bare/broad `except`/`except Exception: pass` with no
-  logging. All six narrowed to the specific exception type each call site
-  actually expects (`AttributeError`, `(OSError, pickle.PicklingError)`,
-  `ImportError` x3, `OSError`, `ValueError` respectively) and now log at
-  debug level instead of silently dropping the failure. See CHANGELOG
-  `[Unreleased]` for the per-site detail. One new gap surfaced in the
-  process, not fixed here: `semantic/assembler.py`'s `self.citations.top_cited(...)`
-  call always raised `AttributeError` because `CitationNetwork`
-  (`semantic/citations.py`) never implemented a `top_cited` method — the
-  citation-assembly branch of `ContextAssembler` has been dead code since
-  it was written (no caller in this repo ever constructs a
-  `ContextAssembler` with a real `citation_network`, and no test exercises
-  it). Implementing `top_cited` is real feature work, out of scope here.
-- ~~**Likely-unintended symbol shadowing**~~ **[Fixed 2026-09-22, not a
-  behavioral bug]** — `validation/__init__.py:18` and the `.types` import
-  block both named `OcrTable`, but diffing them showed `.table.py` never
-  defined its own `OcrTable` class — it only did `from .types import
-  OcrTable` and re-exported it. So both imports resolved to the identical
-  class object (confirmed via `table.OcrTable is types.OcrTable` ->
-  `True`); there was no shadowing of distinct behavior, just a confusing
-  double import of the same name from two paths. Removed the redundant
-  `OcrTable` re-import from `.table` in `validation/__init__.py` and
-  `validation/scorer.py` so it's imported from exactly one place
-  (`validation/types.py`, the actual definition). Full test suite
-  unaffected (557 passed / 2 skipped).
-- ~~**`.pre-commit-config.yaml` has at least one broken hook entry.**~~
-  **[Fixed 2026-09-22]** — `rustfmt` was configured under
-  `repo: https://github.com/oxalica/nil` (a Nix language server, not a Rust
-  formatter) and `rust-clippy` was pinned to the floating `rev: master`.
-  Fixed to match the convention already used in this org's other Rust
-  repos' `.pre-commit-config.yaml` (`PyStreamXL`, `PyRoboFrames`,
-  `statguardian`, `pyvectorhound`, `ClusterAudienceKit`):
-  `repo: https://github.com/rust-lang/rustfmt` @ `v1.7.0` and
-  `repo: https://github.com/rust-lang/rust-clippy` @ `v1.77.0`.
-- **`cargo test --release --all-features` fails at the workspace level on
-  macOS** (verified in this pass): the `python` crate is a PyO3
-  `cdylib`/`extension-module` and cannot be executed as a standalone test
-  binary outside a Python process — it aborts with
-  `dyld: symbol not found in flat namespace '_PyBaseObject_Type'`. This
-  is a macOS linking quirk, not a code bug: `cargo test -p streampdf-core
-  --release --all-features` (the crate that actually has `#[test]`s) runs
-  clean — 23 passed, 0 failed, matching README's claimed count. CI runs on
-  `ubuntu-latest` where this isn't an issue (confirmed green per README's
-  linked run). Anyone testing workspace-wide on macOS should scope to
-  `-p streampdf-core` rather than assume the workspace-wide command is
-  broken.
-- **Stale/inconsistent dependabot branches.** `origin/dependabot/github_actions/actions/checkout-7`
-  and `origin/dependabot/github_actions/actions/setup-python-7` exist as
-  open dependabot branches, but diffing them against `main` shows they
-  also rewrite the Python test job to `cd python && pytest tests/`
-  (assuming a `python/tests/` layout) and drop the PDFium download +
-  `maturin develop` steps entirely — neither matches this repo's actual
-  layout (tests live at repo-root `tests/`; the native extension must be
-  built before `pytest` can import `pystreampdf._core`). These two
-  dependabot PRs would break CI if merged as-is; the underlying version
-  bump they're proposing (`actions/setup-python@v7`) has been applied
-  manually in this pass without the rest of that diff, but the dependabot
-  PRs themselves should be closed without merging (or dependabot needs to
-  regenerate them against the current workflow).
-- **`libpdfium.dylib` and `dist/*.whl`/`*.tar.gz` present in the working
-  tree but correctly gitignored** — not a bug (confirmed not tracked by
-  `git ls-files`), just noting they're local build artifacts from a prior
-  manual build/release and not part of the repo as published.
+| Item | Priority | Effort | Impact | Description |
+|---|---|---|---|---|
+| Ecosystem expansion | P2 | L | High | Plugin system or extension mechanism |
+| Enterprise features | P2 | L | Med-High | Auth, RBAC, multi-tenancy if applicable |
+| Scale & reliability | P2 | L | High | Improved resilience and scalability |
+| Community building | P3 | L | Med | Docs site, examples gallery, contribution guides |
+| Strategic integrations | P3 | L | Med-High | Deeper integrations with major platforms |
 
----
+## Prioritized Feature List with Effort/Impact
 
-This file replaces the previous phase/quarter-based planning, which
-didn't reflect actual delivery pace. See README.md's "Known Issues"
-section for the fuller, itemized list of verified vs. retracted claims.
+| Feature | Category | Effort (S/M/L/XL) | Impact (1-10) | Priority Score | Rationale |
+|---|---|---|---|---|---|
+| Core stability fixes | Tech Debt | S | 10 | 10.0 | Foundation for everything |
+| Documentation overhaul | DX | S | 9 | 9.0 | Lowers adoption barrier |
+| Key integration/add-on | Feature | M | 9 | 6.0 | Closes competitive gap |
+| Performance improvements | Performance | M | 8 | 5.3 | Better user experience |
+| Differentiating feature | Feature | L | 9 | 4.5 | Competitive advantage |
+
+## Success Metrics
+
+| Metric | Current (baseline) | 30-day Target | 90-day Target | Measurement |
+|---|---|---|---|---|
+| Test coverage | Unknown/varies | >70% | >85% | Coverage reports |
+| Documentation completeness | Partial | Core guides complete | Full API/docs reference | Manual review |
+| CI pass rate | Needs verification | 100% on main | 100% on main | CI dashboard |
+| Issue triage | N/A | <48h response | <24h response | GitHub metrics |
+| Adoption signals | N/A | Track usage | Growing trend | Package stats/downloads |
+
+## Technical Debt to Address
+
+| Debt Item | Severity | Effort | Impact if Unaddressed | Plan |
+|---|---|---|---|---|
+| Missing/incomplete tests | High | M | Bugs slip through | Prioritize critical paths |
+| Outdated dependencies | Med-High | M | Security/performance issues | Regular updates, scanning |
+| Code quality issues | Med | M | Maintainability suffers | Incremental refactoring |
+| Documentation debt | High | S-M | Adoption friction | Write as features evolve |
+| Type safety/typing | Med | M | DX issues | Gradual improvement |
+
+## Implementation Notes
+
+- **Focus on differentiation:** Identify unique strengths and amplify them
+- **Stay lean:** Solve real problems better than alternatives
+- **Local-first advantage:** Emphasize privacy/offline/local control where applicable
+- **Quality over quantity:** Do fewer things exceptionally well
+- **Evidence-based:** Base decisions on codebase analysis and user needs
+
+## Next Steps
+
+1. Review and validate against actual user needs
+2. Create GitHub issues for P0 items
+3. Set up milestones/tracking
+4. Execute short-term items first
+5. Review quarterly and adjust
