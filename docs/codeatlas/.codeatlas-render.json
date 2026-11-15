@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "outputs": {
+    "md": [
+      "core.1.md",
+      "docs.2.md",
+      "overview.md",
+      "pystreampdf.4.1.md",
+      "python.4.md",
+      "tools.7.md"
+    ],
+    "html": [
+      "core.1.html",
+      "docs.2.html",
+      "overview.html",
+      "pystreampdf.4.1.html",
+      "python.4.html",
+      "tools.7.html"
+    ]
+  }
+}

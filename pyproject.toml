@@ -28,6 +28,8 @@ requires-python = ">=3.9"
 dependencies = ["rich>=13.0", "pyyaml>=6.0"]
 
 [project.optional-dependencies]
+# Embedded architecture/knowledge-graph engine behind tools/codeatlas.
+architecture = ["codeatlas-rs>=0.3.0"]
 # Real BPE tokenization for accurate token-count estimates. Falls back to the
 # len(text)/4 heuristic (clearly labeled as approximate) when not installed.
 tiktoken = ["tiktoken>=0.5"]
