@@ -109,8 +109,9 @@ impl PdfIndex {
             .map_err(|e| Error::DatabaseError(format!("Failed to prepare statement: {}", e)))?;
 
         let sanitized_query = Self::sanitize_fts5_query(query);
+        let limit = i64::try_from(top_k).unwrap_or(i64::MAX);
         let results = stmt
-            .query_map(params![sanitized_query, top_k], |row| {
+            .query_map(params![sanitized_query, limit], |row| {
                 Ok(PageResult {
                     page_number: row.get(0)?,
                     score: -row.get::<_, f32>(1)?, // BM25 returns negative scores
